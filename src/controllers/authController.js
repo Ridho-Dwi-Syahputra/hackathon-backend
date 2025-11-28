@@ -92,7 +92,7 @@ exports.login = async (req, res, next) => {
 
     // Get user
     const [users] = await db.query(
-      'SELECT users_id, email, full_name, password_hash, status FROM users WHERE email = ?',
+      'SELECT users_id, email, full_name, password_hash, total_xp, status, user_image_url FROM users WHERE email = ?',
       [email]
     );
 
@@ -140,7 +140,10 @@ exports.login = async (req, res, next) => {
         user: {
           users_id: user.users_id,
           email: user.email,
-          full_name: user.full_name
+          full_name: user.full_name,
+          total_xp: user.total_xp,
+          status: user.status,
+          user_image_url: user.user_image_url
         }
       }
     });

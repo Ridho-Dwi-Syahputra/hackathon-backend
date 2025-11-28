@@ -129,17 +129,26 @@ exports.startQuiz = async (req, res, next) => {
         level: {
           id: level.id,
           name: level.name,
+          description: level.description,
           time_limit_seconds: level.time_limit_seconds,
-          pass_threshold: parseFloat(level.pass_threshold)
+          base_xp: level.base_xp,
+          base_points: level.base_points,
+          max_questions: level.max_questions,
+          display_order: level.display_order,
+          pass_condition_type: level.pass_condition_type,
+          pass_threshold: parseFloat(level.pass_threshold),
+          progress: null // Tidak perlu progress saat start quiz
         },
         questions: finalQuestions.map((q, index) => ({
           id: q.id,
           text: q.text,
-          order_index: index,
+          points_correct: q.points_correct,
+          points_wrong: q.points_wrong,
+          display_order: index,
           options: q.options
         })),
-        started_at: startedAt,
-        seed: seed
+        duration_seconds: level.time_limit_seconds,
+        started_at: startedAt
       }
     });
 
@@ -352,7 +361,14 @@ exports.submitQuiz = async (req, res, next) => {
 
     await connection.commit();
 
-    // 12. Return response
+    // 12. Get user's new total XP
+    const [userInfo] = await connection.query(`
+      SELECT total_xp FROM users WHERE users_id = ?
+    `, [userId]);
+    
+    const newTotalXp = userInfo[0]?.total_xp || 0;
+
+    // 13. Return response
     res.json({
       success: true,
       message: isPassed ? 'Selamat! Anda lulus quiz ini' : 'Quiz selesai. Coba lagi untuk hasil lebih baik',
@@ -362,12 +378,11 @@ exports.submitQuiz = async (req, res, next) => {
         correct_count: correctCount,
         wrong_count: wrongCount,
         unanswered_count: unansweredCount,
-        total_questions: attempt.total_questions,
         percent_correct: parseFloat(percentCorrect.toFixed(2)),
-        is_passed: isPassed,
-        pass_threshold: parseFloat(level.pass_threshold),
         xp_earned: xpEarned,
-        unlocked_levels: unlockedLevels,
+        points_earned: scorePoints,  // points_earned sama dengan score_points
+        is_passed: isPassed,
+        new_total_xp: newTotalXp,
         badges_earned: badgesEarned
       }
     });
@@ -582,15 +597,18 @@ async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, con
 
       if (existing.length === 0) {
         // Award badge
+        const earnedAt = new Date();
+        
         await connection.query(`
           INSERT INTO user_badge (
             id, user_id, badge_id, earned_at, 
             source_level_id, source_category_id, attempt_id
-          ) VALUES (?, ?, ?, NOW(), ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
           uuidv4(),
           userId,
           badge.id,
+          earnedAt,
           level.id,
           level.category_id,
           attemptId
@@ -600,7 +618,8 @@ async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, con
           id: badge.id,
           name: badge.name,
           description: badge.description,
-          image_url: badge.image_url
+          image_url: badge.image_url,
+          earned_at: earnedAt.toISOString()
         });
       }
     }
