@@ -1,34 +1,29 @@
-//quizController.js
-
-const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
+const { v4: uuidv4 } = require('uuid');
+const seedrandom = require('seedrandom');
 
-// Start Quiz
+// ============================================================================
+// POST /api/quiz/start - Mulai quiz attempt baru
+// ============================================================================
 exports.startQuiz = async (req, res, next) => {
-  const connection = await db.getConnection();
-  
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { level_id } = req.body;
 
+    // Validasi input
     if (!level_id) {
       return res.status(400).json({
         success: false,
-        message: 'Level ID harus diisi'
+        message: 'level_id harus diisi'
       });
     }
 
-    await connection.beginTransaction();
-
-    // Get level details
-    const [levels] = await connection.query(
-      `SELECT id, name, time_limit_seconds, base_xp, base_points, max_questions 
-       FROM level WHERE id = ? AND is_active = 1`,
-      [level_id]
-    );
+    // 1. Cek level exists dan active
+    const [levels] = await db.query(`
+      SELECT * FROM level WHERE id = ? AND is_active = 1
+    `, [level_id]);
 
     if (levels.length === 0) {
-      await connection.rollback();
       return res.status(404).json({
         success: false,
         message: 'Level tidak ditemukan'
@@ -37,82 +32,95 @@ exports.startQuiz = async (req, res, next) => {
 
     const level = levels[0];
 
-    // Get questions for this level
-    const [questions] = await connection.query(
-      `SELECT q.id, q.text, q.points_correct, q.points_wrong
-       FROM question q
-       WHERE q.level_id = ? AND q.is_active = 1
-       ORDER BY RAND()
-       LIMIT ?`,
-      [level_id, level.max_questions || 10]
-    );
-
-    if (questions.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({
+    // 2. Cek apakah level unlocked (cek prerequisite)
+    const isUnlocked = await checkLevelUnlocked(userId, level_id);
+    
+    if (!isUnlocked) {
+      return res.status(403).json({
         success: false,
-        message: 'Tidak ada soal tersedia untuk level ini'
+        message: 'Level masih terkunci. Selesaikan level prerequisite terlebih dahulu'
       });
     }
 
-    // Get options for all questions
+    // 3. Generate seed untuk shuffle
+    const seed = Math.floor(Math.random() * 1000000);
+
+    // 4. Query questions dengan options
+    const [questions] = await db.query(`
+      SELECT 
+        q.id,
+        q.text,
+        q.points_correct,
+        q.points_wrong,
+        q.display_order
+      FROM question q
+      WHERE q.level_id = ? AND q.is_active = 1
+      ORDER BY q.display_order
+    `, [level_id]);
+
+    if (questions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tidak ada soal untuk level ini'
+      });
+    }
+
+    // 5. Untuk setiap question, ambil options (TANPA is_correct!)
     for (let question of questions) {
-      const [options] = await connection.query(
-        `SELECT id, label, text FROM question_option 
-         WHERE question_id = ? 
-         ORDER BY RAND()`,
-        [question.id]
-      );
+      const [options] = await db.query(`
+        SELECT 
+          id,
+          label,
+          text,
+          display_order
+        FROM question_option
+        WHERE question_id = ?
+        ORDER BY display_order
+      `, [question.id]);
+      
       question.options = options;
     }
 
-    // Create quiz attempt
+    // 6. Shuffle questions dengan seed
+    const shuffledQuestions = shuffleArrayWithSeed(questions, seed);
+
+    // 7. Limit max_questions jika ada
+    let finalQuestions = shuffledQuestions;
+    if (level.max_questions && shuffledQuestions.length > level.max_questions) {
+      finalQuestions = shuffledQuestions.slice(0, level.max_questions);
+    }
+
+    // 8. Create quiz_attempt
     const attemptId = uuidv4();
-    const seed = Math.floor(Math.random() * 1000000);
+    const startedAt = new Date();
 
-    await connection.query(
-      `INSERT INTO quiz_attempt 
-       (id, user_id, level_id, started_at, duration_seconds, seed, total_questions, status, 
-        score_points, correct_count, wrong_count, unanswered_count, percent_correct, created_at, updated_at) 
-       VALUES (?, ?, ?, NOW(), 0, ?, ?, 'in_progress', 0, 0, 0, ?, 0, NOW(), NOW())`,
-      [attemptId, userId, level_id, seed, questions.length, questions.length]
-    );
+    await db.query(`
+      INSERT INTO quiz_attempt (
+        id, user_id, level_id, started_at, duration_seconds, 
+        seed, total_questions, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'in_progress')
+    `, [
+      attemptId,
+      userId,
+      level_id,
+      startedAt,
+      level.time_limit_seconds,
+      seed,
+      finalQuestions.length
+    ]);
 
-    // Create attempt_answer records
-    for (let i = 0; i < questions.length; i++) {
-      const answerId = uuidv4();
-      await connection.query(
-        `INSERT INTO attempt_answer 
-         (id, attempt_id, question_id, option_id, is_correct, answered_at, order_index, created_at, updated_at) 
-         VALUES (?, ?, ?, NULL, NULL, NULL, ?, NOW(), NOW())`,
-        [answerId, attemptId, questions[i].id, i]
-      );
-    }
+    // 9. Update user_level_progress
+    await db.query(`
+      INSERT INTO user_level_progress (
+        user_id, level_id, status, total_attempts, last_updated_at
+      ) VALUES (?, ?, 'in_progress', 1, NOW())
+      ON DUPLICATE KEY UPDATE 
+        status = 'in_progress',
+        total_attempts = total_attempts + 1,
+        last_updated_at = NOW()
+    `, [userId, level_id]);
 
-    // Update or create user_level_progress
-    const [existingProgress] = await connection.query(
-      'SELECT * FROM user_level_progress WHERE user_id = ? AND level_id = ?',
-      [userId, level_id]
-    );
-
-    if (existingProgress.length === 0) {
-      await connection.query(
-        `INSERT INTO user_level_progress 
-         (user_id, level_id, best_percent_correct, best_score_points, total_attempts, status, last_attempt_id, last_updated_at, created_at) 
-         VALUES (?, ?, 0, 0, 0, 'in_progress', ?, NOW(), NOW())`,
-        [userId, level_id, attemptId]
-      );
-    } else {
-      await connection.query(
-        `UPDATE user_level_progress 
-         SET status = 'in_progress', last_attempt_id = ?, last_updated_at = NOW() 
-         WHERE user_id = ? AND level_id = ?`,
-        [attemptId, userId, level_id]
-      );
-    }
-
-    await connection.commit();
-
+    // 10. Return response (TANPA is_correct!)
     res.json({
       success: true,
       message: 'Quiz dimulai',
@@ -122,237 +130,245 @@ exports.startQuiz = async (req, res, next) => {
           id: level.id,
           name: level.name,
           time_limit_seconds: level.time_limit_seconds,
-          base_xp: level.base_xp,
-          base_points: level.base_points
+          pass_threshold: parseFloat(level.pass_threshold)
         },
-        questions: questions.map((q, index) => ({
-          order_index: index,
-          question_id: q.id,
+        questions: finalQuestions.map((q, index) => ({
+          id: q.id,
           text: q.text,
-          points_correct: q.points_correct,
-          points_wrong: q.points_wrong,
+          order_index: index,
           options: q.options
         })),
-        total_questions: questions.length
+        started_at: startedAt,
+        seed: seed
       }
     });
 
   } catch (error) {
-    await connection.rollback();
     next(error);
-  } finally {
-    connection.release();
   }
 };
 
-// Submit Quiz
+// ============================================================================
+// POST /api/quiz/submit - Submit jawaban quiz
+// ============================================================================
 exports.submitQuiz = async (req, res, next) => {
   const connection = await db.getConnection();
   
   try {
-    const userId = req.user.id;
+    await connection.beginTransaction();
+
+    const userId = req.user.users_id;
     const { attempt_id, answers } = req.body;
 
+    // Validasi input
     if (!attempt_id || !answers || !Array.isArray(answers)) {
+      await connection.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Data tidak valid'
+        message: 'attempt_id dan answers harus diisi'
       });
     }
 
-    await connection.beginTransaction();
-
-    // Get attempt details
-    const [attempts] = await connection.query(
-      `SELECT qa.*, l.base_xp, l.base_points, l.pass_threshold, l.category_id
-       FROM quiz_attempt qa
-       JOIN level l ON qa.level_id = l.id
-       WHERE qa.id = ? AND qa.user_id = ? AND qa.status = 'in_progress'`,
-      [attempt_id, userId]
-    );
+    // 1. Cek attempt exists dan milik user ini
+    const [attempts] = await connection.query(`
+      SELECT * FROM quiz_attempt 
+      WHERE id = ? AND user_id = ?
+    `, [attempt_id, userId]);
 
     if (attempts.length === 0) {
       await connection.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Attempt tidak ditemukan atau sudah selesai'
+        message: 'Quiz attempt tidak ditemukan'
       });
     }
 
     const attempt = attempts[0];
+
+    // 2. Cek status masih in_progress
+    if (attempt.status !== 'in_progress') {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Quiz sudah di-submit sebelumnya'
+      });
+    }
+
+    // 3. Get level info
+    const [levels] = await connection.query(`
+      SELECT * FROM level WHERE id = ?
+    `, [attempt.level_id]);
+
+    const level = levels[0];
+
+    // 4. Get all questions dengan jawaban benar
+    const [questions] = await connection.query(`
+      SELECT 
+        q.id,
+        q.points_correct,
+        q.points_wrong,
+        qo.id as correct_option_id
+      FROM question q
+      LEFT JOIN question_option qo ON q.id = qo.question_id AND qo.is_correct = 1
+      WHERE q.level_id = ?
+    `, [level.id]);
+
+    // Buat map untuk cepat lookup
+    const questionMap = {};
+    questions.forEach(q => {
+      questionMap[q.id] = {
+        correct_option_id: q.correct_option_id,
+        points_correct: q.points_correct,
+        points_wrong: q.points_wrong
+      };
+    });
+
+    // 5. Validasi dan hitung score
     let correctCount = 0;
     let wrongCount = 0;
     let unansweredCount = 0;
-    let totalPoints = 0;
+    let scorePoints = 0;
 
-    // Process each answer
     for (let answer of answers) {
-      const { question_id, option_id } = answer;
+      const { question_id, option_id, answered_at } = answer;
 
+      const questionInfo = questionMap[question_id];
+      if (!questionInfo) continue; // Skip jika question tidak valid
+
+      let isCorrect = null;
+      
       if (!option_id) {
+        // Tidak dijawab
         unansweredCount++;
-        continue;
-      }
-
-      // Get correct option and points
-      const [questions] = await connection.query(
-        'SELECT points_correct, points_wrong FROM question WHERE id = ?',
-        [question_id]
-      );
-
-      const [options] = await connection.query(
-        'SELECT is_correct FROM question_option WHERE id = ?',
-        [option_id]
-      );
-
-      if (questions.length === 0 || options.length === 0) {
-        continue;
-      }
-
-      const isCorrect = options[0].is_correct;
-      const points = isCorrect ? questions[0].points_correct : questions[0].points_wrong;
-
-      if (isCorrect) {
-        correctCount++;
+        isCorrect = null;
       } else {
-        wrongCount++;
+        // Ada jawaban
+        isCorrect = option_id === questionInfo.correct_option_id;
+        
+        if (isCorrect) {
+          correctCount++;
+          scorePoints += questionInfo.points_correct;
+        } else {
+          wrongCount++;
+          scorePoints += questionInfo.points_wrong; // Biasanya 0 atau negatif
+        }
       }
 
-      totalPoints += points;
-
-      // Update attempt_answer
-      await connection.query(
-        `UPDATE attempt_answer 
-         SET option_id = ?, is_correct = ?, answered_at = NOW(), updated_at = NOW() 
-         WHERE attempt_id = ? AND question_id = ?`,
-        [option_id, isCorrect, attempt_id, question_id]
-      );
+      // 6. Insert ke attempt_answer
+      const answeredAtFormatted = answered_at ? new Date(answered_at) : null;
+      
+      await connection.query(`
+        INSERT INTO attempt_answer (
+          id, attempt_id, question_id, option_id, 
+          is_correct, answered_at, order_index
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+        uuidv4(),
+        attempt_id,
+        question_id,
+        option_id,
+        isCorrect,
+        answeredAtFormatted,
+        answers.indexOf(answer)
+      ]);
     }
 
-    // Calculate percent correct
-    const percentCorrect = attempt.total_questions > 0 
-      ? (correctCount / attempt.total_questions * 100).toFixed(2) 
-      : 0;
+    // 7. Hitung percent correct
+    const percentCorrect = (correctCount / attempt.total_questions) * 100;
 
-    // Update quiz_attempt
-    await connection.query(
-      `UPDATE quiz_attempt 
-       SET status = 'submitted', finished_at = NOW(), 
-           duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()),
-           score_points = ?, correct_count = ?, wrong_count = ?, 
-           unanswered_count = ?, percent_correct = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [totalPoints, correctCount, wrongCount, unansweredCount, percentCorrect, attempt_id]
-    );
+    // 8. Update quiz_attempt
+    const finishedAt = new Date();
+    const isPassed = percentCorrect >= parseFloat(level.pass_threshold);
 
-    // Check if level is passed
-    const isPassed = parseFloat(percentCorrect) >= parseFloat(attempt.pass_threshold);
+    await connection.query(`
+      UPDATE quiz_attempt SET
+        finished_at = ?,
+        status = 'submitted',
+        score_points = ?,
+        correct_count = ?,
+        wrong_count = ?,
+        unanswered_count = ?,
+        percent_correct = ?
+      WHERE id = ?
+    `, [
+      finishedAt,
+      scorePoints,
+      correctCount,
+      wrongCount,
+      unansweredCount,
+      percentCorrect,
+      attempt_id
+    ]);
 
-    // Update user_level_progress
-    const [currentProgress] = await connection.query(
-      'SELECT best_percent_correct, best_score_points, total_attempts FROM user_level_progress WHERE user_id = ? AND level_id = ?',
-      [userId, attempt.level_id]
-    );
-
-    const newBestPercent = Math.max(
-      parseFloat(currentProgress[0].best_percent_correct), 
-      parseFloat(percentCorrect)
-    );
-    const newBestScore = Math.max(
-      currentProgress[0].best_score_points, 
-      totalPoints
-    );
+    // 9. Update user_level_progress
     const newStatus = isPassed ? 'completed' : 'in_progress';
+    
+    await connection.query(`
+      UPDATE user_level_progress SET
+        best_percent_correct = GREATEST(best_percent_correct, ?),
+        best_score_points = GREATEST(best_score_points, ?),
+        status = ?,
+        last_attempt_id = ?,
+        last_updated_at = NOW()
+      WHERE user_id = ? AND level_id = ?
+    `, [
+      percentCorrect,
+      scorePoints,
+      newStatus,
+      attempt_id,
+      userId,
+      level.id
+    ]);
 
-    await connection.query(
-      `UPDATE user_level_progress 
-       SET best_percent_correct = ?, best_score_points = ?, total_attempts = total_attempts + 1, 
-           status = ?, last_attempt_id = ?, last_updated_at = NOW()
-       WHERE user_id = ? AND level_id = ?`,
-      [newBestPercent, newBestScore, newStatus, attempt_id, userId, attempt.level_id]
-    );
+    // 10. Jika lulus, hitung XP dan unlock next levels
+    let xpEarned = 0;
+    let unlockedLevels = [];
 
-    // Update user XP
-    const xpGained = isPassed ? attempt.base_xp : 0;
-    await connection.query(
-      'UPDATE users SET total_xp = total_xp + ?, updated_at = NOW() WHERE id = ?',
-      [xpGained, userId]
-    );
+    if (isPassed) {
+      // Hitung XP dengan bonus
+      const bonus = Math.floor((percentCorrect - parseFloat(level.pass_threshold)) * 0.5);
+      xpEarned = level.base_xp + bonus;
 
-    // Update user points
-    await connection.query(
-      `UPDATE user_points 
-       SET total_points = total_points + ?, lifetime_points = lifetime_points + ?, last_updated_at = NOW() 
-       WHERE user_id = ?`,
-      [totalPoints, totalPoints, userId]
-    );
+      // Update total XP user
+      await connection.query(`
+        UPDATE users SET total_xp = total_xp + ? WHERE users_id = ?
+      `, [xpEarned, userId]);
 
-    // Update category progress
-    const [completedLevels] = await connection.query(
-      `SELECT COUNT(*) as completed FROM user_level_progress 
-       WHERE user_id = ? AND level_id IN (SELECT id FROM level WHERE category_id = ?) AND status = 'completed'`,
-      [userId, attempt.category_id]
-    );
+      // Unlock next levels
+      unlockedLevels = await unlockNextLevels(userId, level.id, connection);
 
-    const [totalLevels] = await connection.query(
-      'SELECT COUNT(*) as total FROM level WHERE category_id = ? AND is_active = 1',
-      [attempt.category_id]
-    );
-
-    const categoryPercent = totalLevels[0].total > 0 
-      ? (completedLevels[0].completed / totalLevels[0].total * 100).toFixed(2) 
-      : 0;
-
-    const [existingCategoryProgress] = await connection.query(
-      'SELECT * FROM user_category_progress WHERE user_id = ? AND category_id = ?',
-      [userId, attempt.category_id]
-    );
-
-    if (existingCategoryProgress.length === 0) {
-      await connection.query(
-        `INSERT INTO user_category_progress 
-         (user_id, category_id, percent_completed, completed_levels_count, total_levels_count, last_updated_at, created_at) 
-         VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
-        [userId, attempt.category_id, categoryPercent, completedLevels[0].completed, totalLevels[0].total]
-      );
-    } else {
-      await connection.query(
-        `UPDATE user_category_progress 
-         SET percent_completed = ?, completed_levels_count = ?, total_levels_count = ?, last_updated_at = NOW() 
-         WHERE user_id = ? AND category_id = ?`,
-        [categoryPercent, completedLevels[0].completed, totalLevels[0].total, userId, attempt.category_id]
-      );
+      // Update category progress
+      await updateCategoryProgress(userId, level.category_id, connection);
     }
 
-    // Check for badge achievements (simplified - you can expand this)
-    await checkAndAwardBadges(connection, userId, attempt.level_id, attempt.category_id, attempt_id, percentCorrect);
+    // 11. Check dan award badges
+    const badgesEarned = await checkAndAwardBadges(
+      userId, 
+      attempt_id, 
+      level, 
+      percentCorrect, 
+      connection
+    );
 
     await connection.commit();
 
-    // Get updated user data
-    const [userData] = await connection.query(
-      `SELECT u.total_xp, up.total_points, up.lifetime_points
-       FROM users u
-       JOIN user_points up ON u.id = up.user_id
-       WHERE u.id = ?`,
-      [userId]
-    );
-
+    // 12. Return response
     res.json({
       success: true,
-      message: 'Quiz berhasil diselesaikan',
+      message: isPassed ? 'Selamat! Anda lulus quiz ini' : 'Quiz selesai. Coba lagi untuk hasil lebih baik',
       data: {
-        attempt_id,
-        score_points: totalPoints,
+        attempt_id: attempt_id,
+        score_points: scorePoints,
         correct_count: correctCount,
         wrong_count: wrongCount,
         unanswered_count: unansweredCount,
-        percent_correct: percentCorrect,
+        total_questions: attempt.total_questions,
+        percent_correct: parseFloat(percentCorrect.toFixed(2)),
         is_passed: isPassed,
-        xp_gained: xpGained,
-        total_xp: userData[0].total_xp,
-        total_points: userData[0].total_points,
-        lifetime_points: userData[0].lifetime_points
+        pass_threshold: parseFloat(level.pass_threshold),
+        xp_earned: xpEarned,
+        unlocked_levels: unlockedLevels,
+        badges_earned: badgesEarned
       }
     });
 
@@ -364,113 +380,231 @@ exports.submitQuiz = async (req, res, next) => {
   }
 };
 
-// Helper function to check and award badges
-async function checkAndAwardBadges(connection, userId, levelId, categoryId, attemptId, percentCorrect) {
-  try {
-    // Check for 100% level completion badge
-    if (parseFloat(percentCorrect) === 100) {
-      const [badges] = await connection.query(
-        `SELECT id FROM badge WHERE criteria_type = 'level_100_percent' AND is_active = 1 LIMIT 1`
-      );
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
-      if (badges.length > 0) {
-        const badgeId = badges[0].id;
-        
-        // Check if user already has this badge
-        const [existing] = await connection.query(
-          'SELECT id FROM user_badge WHERE user_id = ? AND badge_id = ?',
-          [userId, badgeId]
-        );
-
-        if (existing.length === 0) {
-          await connection.query(
-            `INSERT INTO user_badge 
-             (id, user_id, badge_id, earned_at, source_level_id, source_category_id, attempt_id, created_at) 
-             VALUES (?, ?, ?, NOW(), ?, ?, ?, NOW())`,
-            [uuidv4(), userId, badgeId, levelId, categoryId, attemptId]
-          );
-        }
-      }
-    }
-
-    // Check for category mastery badge
-    const [categoryProgress] = await connection.query(
-      'SELECT percent_completed FROM user_category_progress WHERE user_id = ? AND category_id = ?',
-      [userId, categoryId]
-    );
-
-    if (categoryProgress.length > 0 && parseFloat(categoryProgress[0].percent_completed) === 100) {
-      const [badges] = await connection.query(
-        `SELECT id FROM badge WHERE criteria_type = 'category_mastery' AND is_active = 1 LIMIT 1`
-      );
-
-      if (badges.length > 0) {
-        const badgeId = badges[0].id;
-        
-        const [existing] = await connection.query(
-          'SELECT id FROM user_badge WHERE user_id = ? AND badge_id = ? AND source_category_id = ?',
-          [userId, badgeId, categoryId]
-        );
-
-        if (existing.length === 0) {
-          await connection.query(
-            `INSERT INTO user_badge 
-             (id, user_id, badge_id, earned_at, source_category_id, attempt_id, created_at) 
-             VALUES (?, ?, ?, NOW(), ?, ?, NOW())`,
-            [uuidv4(), userId, badgeId, categoryId, attemptId]
-          );
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error checking badges:', error);
-    // Don't throw error, just log it
+// Shuffle array dengan seed (deterministic)
+function shuffleArrayWithSeed(array, seed) {
+  const rng = seedrandom(seed.toString());
+  const shuffled = [...array];
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
+  
+  return shuffled;
 }
 
-// Get Quiz Attempt Details
-exports.getQuizAttempt = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { attemptId } = req.params;
+// Cek apakah level sudah unlocked
+async function checkLevelUnlocked(userId, levelId) {
+  // Cek prerequisite
+  const [prerequisites] = await db.query(`
+    SELECT required_level_id FROM prerequisite_level
+    WHERE level_id = ?
+  `, [levelId]);
 
-    const [attempts] = await db.query(
-      `SELECT qa.*, l.name as level_name, l.time_limit_seconds
-       FROM quiz_attempt qa
-       JOIN level l ON qa.level_id = l.id
-       WHERE qa.id = ? AND qa.user_id = ?`,
-      [attemptId, userId]
-    );
+  // Jika tidak ada prerequisite, level unlocked
+  if (prerequisites.length === 0) {
+    return true;
+  }
 
-    if (attempts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Attempt tidak ditemukan'
-      });
+  // Cek apakah semua prerequisite sudah completed
+  for (let prereq of prerequisites) {
+    const [progress] = await db.query(`
+      SELECT status, best_percent_correct
+      FROM user_level_progress
+      WHERE user_id = ? AND level_id = ?
+    `, [userId, prereq.required_level_id]);
+
+    // Prerequisite belum di-attempt atau belum completed
+    if (progress.length === 0 || progress[0].status !== 'completed') {
+      return false;
     }
 
-    const attempt = attempts[0];
+    // Cek passing grade
+    const [level] = await db.query(`
+      SELECT pass_threshold FROM level WHERE id = ?
+    `, [prereq.required_level_id]);
 
-    // Get answers
-    const [answers] = await db.query(
-      `SELECT aa.*, q.text as question_text, qo.text as selected_answer, qo.label as selected_label
-       FROM attempt_answer aa
-       JOIN question q ON aa.question_id = q.id
-       LEFT JOIN question_option qo ON aa.option_id = qo.id
-       WHERE aa.attempt_id = ?
-       ORDER BY aa.order_index`,
-      [attemptId]
-    );
-
-    res.json({
-      success: true,
-      data: {
-        attempt,
-        answers
-      }
-    });
-
-  } catch (error) {
-    next(error);
+    if (progress[0].best_percent_correct < level[0].pass_threshold) {
+      return false;
+    }
   }
-};
+
+  return true;
+}
+
+// Unlock next levels setelah complete level ini
+async function unlockNextLevels(userId, completedLevelId, connection) {
+  const unlockedLevels = [];
+
+  // Cari level yang membutuhkan level ini sebagai prerequisite
+  const [nextLevels] = await connection.query(`
+    SELECT DISTINCT level_id FROM prerequisite_level
+    WHERE required_level_id = ?
+  `, [completedLevelId]);
+
+  for (let nextLevel of nextLevels) {
+    // Cek apakah semua prerequisite level ini sudah completed
+    const [allPrereqs] = await connection.query(`
+      SELECT pl.required_level_id, ulp.status, ulp.best_percent_correct, l.pass_threshold
+      FROM prerequisite_level pl
+      LEFT JOIN user_level_progress ulp ON pl.required_level_id = ulp.level_id AND ulp.user_id = ?
+      LEFT JOIN level l ON pl.required_level_id = l.id
+      WHERE pl.level_id = ?
+    `, [userId, nextLevel.level_id]);
+
+    let allCompleted = true;
+    for (let prereq of allPrereqs) {
+      if (!prereq.status || prereq.status !== 'completed' || 
+          prereq.best_percent_correct < prereq.pass_threshold) {
+        allCompleted = false;
+        break;
+      }
+    }
+
+    if (allCompleted) {
+      // Unlock level ini
+      await connection.query(`
+        INSERT INTO user_level_progress (
+          user_id, level_id, status, total_attempts, last_updated_at
+        ) VALUES (?, ?, 'unstarted', 0, NOW())
+        ON DUPLICATE KEY UPDATE 
+          status = IF(status = 'locked', 'unstarted', status),
+          last_updated_at = NOW()
+      `, [userId, nextLevel.level_id]);
+
+      // Ambil info level yang di-unlock
+      const [levelInfo] = await connection.query(`
+        SELECT id, name FROM level WHERE id = ?
+      `, [nextLevel.level_id]);
+
+      if (levelInfo.length > 0) {
+        unlockedLevels.push(levelInfo[0]);
+      }
+    }
+  }
+
+  return unlockedLevels;
+}
+
+// Update category progress
+async function updateCategoryProgress(userId, categoryId, connection) {
+  // Hitung total level dan completed level
+  const [stats] = await connection.query(`
+    SELECT 
+      COUNT(l.id) as total_levels,
+      SUM(CASE WHEN ulp.status = 'completed' THEN 1 ELSE 0 END) as completed_levels
+    FROM level l
+    LEFT JOIN user_level_progress ulp ON l.id = ulp.level_id AND ulp.user_id = ?
+    WHERE l.category_id = ? AND l.is_active = 1
+  `, [userId, categoryId]);
+
+  const totalLevels = stats[0].total_levels;
+  const completedLevels = stats[0].completed_levels || 0;
+  const percentCompleted = totalLevels > 0 ? (completedLevels / totalLevels) * 100 : 0;
+
+  // Update atau insert
+  await connection.query(`
+    INSERT INTO user_category_progress (
+      user_id, category_id, percent_completed, 
+      completed_levels_count, total_levels_count, last_updated_at
+    ) VALUES (?, ?, ?, ?, ?, NOW())
+    ON DUPLICATE KEY UPDATE
+      percent_completed = ?,
+      completed_levels_count = ?,
+      total_levels_count = ?,
+      last_updated_at = NOW()
+  `, [
+    userId, categoryId, percentCompleted, completedLevels, totalLevels,
+    percentCompleted, completedLevels, totalLevels
+  ]);
+}
+
+// Check dan award badges
+async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, connection) {
+  const badgesEarned = [];
+
+  // Get all active badges
+  const [badges] = await connection.query(`
+    SELECT * FROM badge WHERE is_active = 1
+  `);
+
+  for (let badge of badges) {
+    let shouldAward = false;
+    const criteriaValue = JSON.parse(badge.criteria_value);
+
+    switch (badge.criteria_type) {
+      case 'level_100_percent':
+        // Perfect score pada level tertentu
+        if (percentCorrect === 100) {
+          shouldAward = true;
+        }
+        break;
+
+      case 'category_mastery':
+        // Complete semua level dalam kategori dengan >= threshold
+        const [categoryProgress] = await connection.query(`
+          SELECT percent_completed FROM user_category_progress
+          WHERE user_id = ? AND category_id = ?
+        `, [userId, level.category_id]);
+
+        if (categoryProgress.length > 0 && 
+            categoryProgress[0].percent_completed >= (criteriaValue.threshold || 100)) {
+          shouldAward = true;
+        }
+        break;
+
+      case 'points_total':
+        // Total points mencapai threshold
+        const [userPoints] = await connection.query(`
+          SELECT total_points FROM user_points WHERE user_id = ?
+        `, [userId]);
+
+        if (userPoints.length > 0 && 
+            userPoints[0].total_points >= criteriaValue.threshold) {
+          shouldAward = true;
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    if (shouldAward) {
+      // Cek apakah badge sudah pernah di-award
+      const [existing] = await connection.query(`
+        SELECT id FROM user_badge 
+        WHERE user_id = ? AND badge_id = ?
+      `, [userId, badge.id]);
+
+      if (existing.length === 0) {
+        // Award badge
+        await connection.query(`
+          INSERT INTO user_badge (
+            id, user_id, badge_id, earned_at, 
+            source_level_id, source_category_id, attempt_id
+          ) VALUES (?, ?, ?, NOW(), ?, ?, ?)
+        `, [
+          uuidv4(),
+          userId,
+          badge.id,
+          level.id,
+          level.category_id,
+          attemptId
+        ]);
+
+        badgesEarned.push({
+          id: badge.id,
+          name: badge.name,
+          description: badge.description,
+          image_url: badge.image_url
+        });
+      }
+    }
+  }
+
+  return badgesEarned;
+}

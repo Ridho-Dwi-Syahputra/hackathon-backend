@@ -1,13 +1,15 @@
-//categoryroutes
-
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
-const authMiddleware = require('../middleware/auth');
+const auth = require('../middleware/auth');
 
-router.use(authMiddleware);
+// Semua route butuh authentication
+router.use(auth);
 
+// GET /api/categories - List semua kategori dengan progress
 router.get('/', categoryController.getCategories);
-router.get('/:categoryId/levels', categoryController.getLevelsByCategory);
+
+// GET /api/categories/:id/levels - List level dalam kategori
+router.get('/:id/levels', categoryController.getCategoryLevels);
 
 module.exports = router;

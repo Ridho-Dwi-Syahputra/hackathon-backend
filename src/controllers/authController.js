@@ -31,7 +31,7 @@ exports.register = async (req, res, next) => {
 
     // Check if email exists
     const [existingUsers] = await connection.query(
-      'SELECT id FROM users WHERE email = ?',
+      'SELECT users_id FROM users WHERE email = ?',
       [email]
     );
 
@@ -50,7 +50,7 @@ exports.register = async (req, res, next) => {
 
     // Insert user
     await connection.query(
-      `INSERT INTO users (id, full_name, email, password_hash, total_xp, status, created_at, updated_at) 
+      `INSERT INTO users (users_id, full_name, email, password_hash, total_xp, status, created_at, updated_at) 
        VALUES (?, ?, ?, ?, 0, 'active', NOW(), NOW())`,
       [userId, full_name, email, hashedPassword]
     );
@@ -92,7 +92,7 @@ exports.login = async (req, res, next) => {
 
     // Get user
     const [users] = await db.query(
-      'SELECT id, email, full_name, password_hash, status FROM users WHERE email = ?',
+      'SELECT users_id, email, full_name, password_hash, status FROM users WHERE email = ?',
       [email]
     );
 
@@ -124,12 +124,12 @@ exports.login = async (req, res, next) => {
     }
 
     // Generate token
-    const token = generateToken(user.id);
+    const token = generateToken(user.users_id);
 
     // Save token to database
     await db.query(
-      'UPDATE users SET token = ?, token_validity = DATE_ADD(NOW(), INTERVAL 7 DAY) WHERE id = ?',
-      [token, user.id]
+      'UPDATE users SET token = ?, token_validity = DATE_ADD(NOW(), INTERVAL 7 DAY) WHERE users_id = ?',
+      [token, user.users_id]
     );
 
     res.json({
@@ -138,7 +138,7 @@ exports.login = async (req, res, next) => {
       data: {
         token,
         user: {
-          id: user.id,
+          users_id: user.users_id,
           email: user.email,
           full_name: user.full_name
         }
@@ -153,17 +153,52 @@ exports.login = async (req, res, next) => {
 // Logout
 exports.logout = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
 
     // Clear token from database
     await db.query(
-      'UPDATE users SET token = NULL, token_validity = NULL WHERE id = ?',
+      'UPDATE users SET token = NULL, token_validity = NULL WHERE users_id = ?',
       [userId]
     );
 
     res.json({
       success: true,
       message: 'Logout berhasil'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET Profile
+exports.getProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.users_id;
+
+    const [users] = await db.query(`
+      SELECT 
+        users_id,
+        full_name,
+        email,
+        total_xp,
+        status,
+        user_image_url,
+        created_at
+      FROM users 
+      WHERE users_id = ?
+    `, [userId]);
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: users[0]
     });
 
   } catch (error) {

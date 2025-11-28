@@ -22,7 +22,7 @@ const authMiddleware = async (req, res, next) => {
 
     // Check if token exists in database and is valid
     const [users] = await db.query(
-      'SELECT id, email, full_name, status FROM users WHERE id = ? AND token = ? AND status = "active"',
+      'SELECT users_id, email, full_name, status FROM users WHERE users_id = ? AND token = ? AND status = "active"',
       [decoded.userId, token]
     );
 

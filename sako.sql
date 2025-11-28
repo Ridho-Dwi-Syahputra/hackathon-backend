@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 01, 2025 at 10:12 AM
+-- Generation Time: Nov 27, 2025 at 05:06 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -113,7 +113,7 @@ CREATE TABLE `prerequisite_level` (
 --
 
 CREATE TABLE `qr_code` (
-  `id` char(36) NOT NULL,
+  `qr_code_id` char(36) NOT NULL,
   `tourist_place_id` char(36) NOT NULL,
   `code_value` varchar(255) NOT NULL,
   `is_active` tinyint(1) DEFAULT 1,
@@ -205,14 +205,52 @@ CREATE TABLE `quiz_category` (
 --
 
 CREATE TABLE `review` (
-  `id` char(36) NOT NULL,
+  `review_id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `tourist_place_id` char(36) NOT NULL,
   `rating` int(11) DEFAULT NULL CHECK (`rating` between 1 and 5),
   `review_text` text DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `total_likes` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `review`
+--
+DELIMITER $$
+CREATE TRIGGER `after_review_insert_update_rating` AFTER INSERT ON `review` FOR EACH ROW BEGIN
+    -- Update hanya rata-rata rating di tabel tourist_place
+    UPDATE `tourist_place`
+    SET 
+        average_rating = (SELECT IFNULL(AVG(rating), 0) FROM review WHERE tourist_place_id = NEW.tourist_place_id)
+    WHERE id = NEW.tourist_place_id;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `review_like`
+--
+
+CREATE TABLE `review_like` (
+  `review_like_id` char(36) NOT NULL,
+  `user_id` char(36) NOT NULL,
+  `review_id` char(36) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `review_like`
+--
+DELIMITER $$
+CREATE TRIGGER `after_review_like_insert` AFTER INSERT ON `review_like` FOR EACH ROW UPDATE review
+SET total_likes = total_likes + 1
+WHERE id = NEW.review_id
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -221,16 +259,15 @@ CREATE TABLE `review` (
 --
 
 CREATE TABLE `tourist_place` (
-  `id` char(36) NOT NULL,
+  `tourist_place_id` char(36) NOT NULL,
   `name` varchar(150) NOT NULL,
   `description` text DEFAULT NULL,
-  `location_lat` decimal(9,6) NOT NULL,
-  `location_lng` decimal(9,6) NOT NULL,
   `address` varchar(255) DEFAULT NULL,
   `image_url` varchar(512) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `average_rating` decimal(3,1) DEFAULT 0.0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -240,7 +277,7 @@ CREATE TABLE `tourist_place` (
 --
 
 CREATE TABLE `users` (
-  `id` char(36) NOT NULL,
+  `users_id` char(36) NOT NULL,
   `full_name` varchar(150) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
@@ -325,7 +362,7 @@ CREATE TABLE `user_points` (
 --
 
 CREATE TABLE `user_visit` (
-  `id` char(36) NOT NULL,
+  `user_visit_id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `tourist_place_id` char(36) NOT NULL,
   `status` enum('visited','not_visited') DEFAULT 'not_visited',
@@ -398,7 +435,7 @@ ALTER TABLE `prerequisite_level`
 -- Indexes for table `qr_code`
 --
 ALTER TABLE `qr_code`
-  ADD PRIMARY KEY (`id`),
+  ADD PRIMARY KEY (`qr_code_id`),
   ADD UNIQUE KEY `code_value` (`code_value`),
   ADD KEY `tourist_place_id` (`tourist_place_id`);
 
@@ -434,21 +471,29 @@ ALTER TABLE `quiz_category`
 -- Indexes for table `review`
 --
 ALTER TABLE `review`
-  ADD PRIMARY KEY (`id`),
+  ADD PRIMARY KEY (`review_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `tourist_place_id` (`tourist_place_id`);
+
+--
+-- Indexes for table `review_like`
+--
+ALTER TABLE `review_like`
+  ADD PRIMARY KEY (`review_like_id`),
+  ADD UNIQUE KEY `unique_user_review_like` (`user_id`,`review_id`),
+  ADD KEY `review_id` (`review_id`);
 
 --
 -- Indexes for table `tourist_place`
 --
 ALTER TABLE `tourist_place`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`tourist_place_id`);
 
 --
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`),
+  ADD PRIMARY KEY (`users_id`),
   ADD UNIQUE KEY `email` (`email`),
   ADD UNIQUE KEY `token` (`token`);
 
@@ -488,7 +533,7 @@ ALTER TABLE `user_points`
 -- Indexes for table `user_visit`
 --
 ALTER TABLE `user_visit`
-  ADD PRIMARY KEY (`id`),
+  ADD PRIMARY KEY (`user_visit_id`),
   ADD UNIQUE KEY `user_id` (`user_id`,`tourist_place_id`),
   ADD KEY `tourist_place_id` (`tourist_place_id`);
 
@@ -514,7 +559,7 @@ ALTER TABLE `attempt_answer`
 -- Constraints for table `favorit_video`
 --
 ALTER TABLE `favorit_video`
-  ADD CONSTRAINT `favorit_video_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `favorit_video_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `users` (`users_id`),
   ADD CONSTRAINT `favorit_video_ibfk_2` FOREIGN KEY (`id_video`) REFERENCES `video` (`id`);
 
 --
@@ -534,7 +579,7 @@ ALTER TABLE `prerequisite_level`
 -- Constraints for table `qr_code`
 --
 ALTER TABLE `qr_code`
-  ADD CONSTRAINT `qr_code_ibfk_1` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`id`);
+  ADD CONSTRAINT `qr_code_ibfk_1` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`tourist_place_id`);
 
 --
 -- Constraints for table `question`
@@ -552,21 +597,28 @@ ALTER TABLE `question_option`
 -- Constraints for table `quiz_attempt`
 --
 ALTER TABLE `quiz_attempt`
-  ADD CONSTRAINT `quiz_attempt_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `quiz_attempt_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
   ADD CONSTRAINT `quiz_attempt_ibfk_2` FOREIGN KEY (`level_id`) REFERENCES `level` (`id`);
 
 --
 -- Constraints for table `review`
 --
 ALTER TABLE `review`
-  ADD CONSTRAINT `review_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `review_ibfk_2` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`id`);
+  ADD CONSTRAINT `review_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
+  ADD CONSTRAINT `review_ibfk_2` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`tourist_place_id`);
+
+--
+-- Constraints for table `review_like`
+--
+ALTER TABLE `review_like`
+  ADD CONSTRAINT `review_like_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `review_like_ibfk_2` FOREIGN KEY (`review_id`) REFERENCES `review` (`review_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `user_badge`
 --
 ALTER TABLE `user_badge`
-  ADD CONSTRAINT `user_badge_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `user_badge_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
   ADD CONSTRAINT `user_badge_ibfk_2` FOREIGN KEY (`badge_id`) REFERENCES `badge` (`id`),
   ADD CONSTRAINT `user_badge_ibfk_3` FOREIGN KEY (`source_level_id`) REFERENCES `level` (`id`),
   ADD CONSTRAINT `user_badge_ibfk_4` FOREIGN KEY (`source_category_id`) REFERENCES `quiz_category` (`id`),
@@ -576,14 +628,14 @@ ALTER TABLE `user_badge`
 -- Constraints for table `user_category_progress`
 --
 ALTER TABLE `user_category_progress`
-  ADD CONSTRAINT `user_category_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `user_category_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
   ADD CONSTRAINT `user_category_progress_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `quiz_category` (`id`);
 
 --
 -- Constraints for table `user_level_progress`
 --
 ALTER TABLE `user_level_progress`
-  ADD CONSTRAINT `user_level_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `user_level_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
   ADD CONSTRAINT `user_level_progress_ibfk_2` FOREIGN KEY (`level_id`) REFERENCES `level` (`id`),
   ADD CONSTRAINT `user_level_progress_ibfk_3` FOREIGN KEY (`last_attempt_id`) REFERENCES `quiz_attempt` (`id`);
 
@@ -591,14 +643,14 @@ ALTER TABLE `user_level_progress`
 -- Constraints for table `user_points`
 --
 ALTER TABLE `user_points`
-  ADD CONSTRAINT `user_points_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `user_points_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`);
 
 --
 -- Constraints for table `user_visit`
 --
 ALTER TABLE `user_visit`
-  ADD CONSTRAINT `user_visit_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `user_visit_ibfk_2` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`id`);
+  ADD CONSTRAINT `user_visit_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
+  ADD CONSTRAINT `user_visit_ibfk_2` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`tourist_place_id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

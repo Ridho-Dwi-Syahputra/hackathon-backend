@@ -1,14 +1,15 @@
-//quizRoutes
-
 const express = require('express');
 const router = express.Router();
 const quizController = require('../controllers/quizController');
-const authMiddleware = require('../middleware/auth');
+const auth = require('../middleware/auth');
 
-router.use(authMiddleware);
+// Semua route butuh authentication
+router.use(auth);
 
+// POST /api/quiz/start - Mulai quiz
 router.post('/start', quizController.startQuiz);
+
+// POST /api/quiz/submit - Submit jawaban quiz
 router.post('/submit', quizController.submitQuiz);
-router.get('/attempts/:attemptId', quizController.getQuizAttempt);
 
 module.exports = router;
