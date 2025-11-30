@@ -208,3 +208,114 @@ exports.getProfile = async (req, res, next) => {
     next(error);
   }
 };
+
+// Update FCM Token
+exports.updateFcmToken = async (req, res, next) => {
+  try {
+    const userId = req.user.users_id;
+    const { fcm_token } = req.body;
+
+    if (!fcm_token) {
+      return res.status(400).json({
+        success: false,
+        message: 'FCM token harus diisi'
+      });
+    }
+
+    // Update FCM token
+    await db.query(
+      'UPDATE users SET fcm_token = ? WHERE users_id = ?',
+      [fcm_token, userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'FCM token berhasil diupdate'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update Notification Preferences
+exports.updateNotificationPreferences = async (req, res, next) => {
+  try {
+    const userId = req.user.users_id;
+    const { notification_preferences } = req.body;
+
+    if (!notification_preferences || typeof notification_preferences !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'Notification preferences harus berupa object'
+      });
+    }
+
+    // Validate preference keys
+    const validKeys = ['quiz_reminder', 'achievement_unlock', 'cultural_event', 'weekly_challenge', 'friend_activity', 'marketing'];
+    const invalidKeys = Object.keys(notification_preferences).filter(key => !validKeys.includes(key));
+    
+    if (invalidKeys.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid preference keys: ${invalidKeys.join(', ')}`
+      });
+    }
+
+    // Update preferences
+    await db.query(
+      'UPDATE users SET notification_preferences = ? WHERE users_id = ?',
+      [JSON.stringify(notification_preferences), userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Notification preferences berhasil diupdate'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get Notification Preferences
+exports.getNotificationPreferences = async (req, res, next) => {
+  try {
+    const userId = req.user.users_id;
+
+    const [users] = await db.query(
+      'SELECT notification_preferences FROM users WHERE users_id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User tidak ditemukan'
+      });
+    }
+
+    // Parse JSON preferences
+    let preferences = users[0].notification_preferences;
+    if (typeof preferences === 'string') {
+      preferences = JSON.parse(preferences);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        notification_preferences: preferences || {
+          quiz_reminder: true,
+          achievement_unlock: true,
+          cultural_event: true,
+          weekly_challenge: true,
+          friend_activity: false,
+          marketing: false
+        }
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
