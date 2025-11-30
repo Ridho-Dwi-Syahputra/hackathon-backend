@@ -46,12 +46,40 @@ try {
     // Import routes yang ada
     const authRoutes = require('./routes/authRoutes');
     const quizRoutes = require('./routes/quizRoutes');
-    const categoryRoutes = require('./routes/categoryRoutes');
+    const categoryRoutes = require('./routes/categoryRoutes'); 
+    const mapRoutes = require('./routes/mapRoutes');
+    
+    // Import routes tambahan jika ada
+    let badgeRoutes, profileRoutes, videoRoutes;
+    
+    try {
+        badgeRoutes = require('./routes/badgeRoutes');
+    } catch (e) {
+        console.warn('⚠️ badgeRoutes not found or has error:', e.message);
+    }
+    
+    try {
+        profileRoutes = require('./routes/profileRoutes');
+    } catch (e) {
+        console.warn('⚠️ profileRoutes not found or has error:', e.message);
+    }
+    
+    try {
+        videoRoutes = require('./routes/videoRoutes');
+    } catch (e) {
+        console.warn('⚠️ videoRoutes not found or has error:', e.message);
+    }
     
     // Mount routes
     app.use('/api/auth', authRoutes);
     app.use('/api/quiz', quizRoutes);
     app.use('/api/category', categoryRoutes);
+    app.use('/api/map', mapRoutes);
+    
+    // Mount routes tambahan jika berhasil diimport
+    if (badgeRoutes) app.use('/api/badge', badgeRoutes);
+    if (profileRoutes) app.use('/api/profile', profileRoutes);
+    if (videoRoutes) app.use('/api/video', videoRoutes);
 
 } catch (routeError) {
     console.warn('⚠️ Warning: Some routes failed to load:', routeError.message);
@@ -67,7 +95,10 @@ app.use((req, res) => {
             'POST /api/auth/login',
             'POST /api/auth/register',
             'GET /api/quiz/categories',
-            'GET /api/category/all'
+            'GET /api/category/all',
+            'GET /api/map/detail/:id',
+            'POST /api/map/review/add',
+            'POST /api/map/scan/qr'
         ]
     });
 });
