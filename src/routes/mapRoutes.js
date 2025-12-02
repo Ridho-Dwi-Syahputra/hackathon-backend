@@ -14,62 +14,48 @@ const { reviewMapController } = require('../controllers/modul-map/reviewMapContr
 const { scanMapController } = require('../controllers/modul-map/scanMapController');
 
 // Import middleware
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth');
 
 /**
  * ===========================================
- * DETAIL MAP ROUTES (Fungsional 1, 2, 3)
+ * DETAIL MAP ROUTES (Fungsional 1, 2)
  * ===========================================
  */
 
-// FUNGSIONAL 1: Mendapatkan detail lengkap tempat wisata
-// GET /api/map/detail/:id
-// Optional auth - guest bisa akses, user login dapat info favorit
-router.get('/detail/:id', (req, res, next) => {
-    // Optional authentication - tidak wajib login
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (token) {
-        authenticateToken(req, res, next);
-    } else {
-        req.user = null; // Set sebagai guest
-        next();
-    }
-}, detailMapController.getPlaceDetail);
+// FUNGSIONAL 1: List lokasi budaya dengan status kunjungan
+// GET /api/map/places
+// Required auth - untuk cek status kunjungan user
+router.get('/places', authenticateToken, detailMapController.getPlacesWithVisitStatus);
 
-// FUNGSIONAL 2: Menambahkan/menghapus tempat dari daftar favorit
-// POST /api/map/favorite/toggle
-// Required auth - hanya user login
-router.post('/favorite/toggle', authenticateToken, detailMapController.toggleFavorite);
-
-// FUNGSIONAL 3: Mendapatkan daftar tempat favorit user
-// GET /api/map/favorites
-// Required auth - hanya user login
-router.get('/favorites', authenticateToken, detailMapController.getUserFavorites);
+// FUNGSIONAL 2: Detail lokasi & validasi scan QR
+// GET /api/map/places/:id
+// Required auth - untuk validasi scan QR berdasarkan status kunjungan
+router.get('/places/:id', authenticateToken, detailMapController.getPlaceDetail);
 
 /**
  * ===========================================
- * REVIEW MAP ROUTES (Fungsional 4, 5)
+ * REVIEW MAP ROUTES (Fungsional 3, 4, 5)
  * ===========================================
  */
 
-// FUNGSIONAL 4: Menambahkan review dan rating untuk tempat wisata
-// POST /api/map/review/add
-// Required auth - hanya user login bisa review
-router.post('/review/add', authenticateToken, reviewMapController.addReview);
+// FUNGSIONAL 3: Mendapatkan semua review untuk tempat wisata tertentu
+// GET /api/map/places/:id/reviews
+// Required auth - untuk menampilkan review dengan like status user
+router.get('/places/:id/reviews', authenticateToken, reviewMapController.getPlaceReviews);
 
-// FUNGSIONAL 5: Mendapatkan semua review untuk tempat wisata tertentu
-// GET /api/map/review/:tourist_place_id
-// Optional auth - guest bisa lihat review
-router.get('/review/:tourist_place_id', (req, res, next) => {
-    // Optional authentication - tidak wajib login untuk lihat review
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (token) {
-        authenticateToken(req, res, next);
-    } else {
-        req.user = null; // Set sebagai guest
-        next();
-    }
-}, reviewMapController.getPlaceReviews);
+// FUNGSIONAL 5: Mengelola ulasan (Tambah, Edit, Hapus)
+// POST /api/map/places/:id/reviews/add - Tambah review (EXPLICIT ACTION)
+router.post('/places/:id/reviews/add', authenticateToken, reviewMapController.addReview);
+
+// PUT /api/map/reviews/:id/edit - Edit review (EXPLICIT ACTION)
+router.put('/reviews/:id/edit', authenticateToken, reviewMapController.editReview);
+
+// DELETE /api/map/reviews/:id/delete - Hapus review (EXPLICIT ACTION)
+router.delete('/reviews/:id/delete', authenticateToken, reviewMapController.deleteReview);
+
+// FUNGSIONAL 4: Toggle like pada review
+// POST /api/reviews/:id/toggle-like
+router.post('/reviews/:id/toggle-like', authenticateToken, reviewMapController.toggleReviewLike);
 
 /**
  * ===========================================
@@ -77,31 +63,27 @@ router.get('/review/:tourist_place_id', (req, res, next) => {
  * ===========================================
  */
 
-// FUNGSIONAL 6: Scan QR code di tempat wisata dan catat kunjungan
+// FUNGSIONAL 6: Scan QR code dan catat kunjungan + FCM notification
 // POST /api/map/scan/qr
-// Required auth - hanya user login bisa scan
+// Required auth - hanya user login yang bisa scan QR
 router.post('/scan/qr', authenticateToken, scanMapController.scanQRCode);
-
-// BONUS: Mendapatkan riwayat kunjungan user
-// GET /api/map/scan/history
-// Required auth - hanya user login
-router.get('/scan/history', authenticateToken, scanMapController.getUserVisitHistory);
 
 /**
  * ===========================================
  * ROUTE SUMMARY & DOCUMENTATION
  * ===========================================
  * 
- * PUBLIC ROUTES (Guest Access):
- * - GET    /api/map/detail/:id              - Detail tempat wisata
- * - GET    /api/map/review/:tourist_place_id  - List review tempat
+ * AUTHENTICATED ROUTES (6 Fungsionalitas) - EXPLICIT ACTION NAMING:
+ * - GET    /api/map/places                     - List tempat dengan status kunjungan
+ * - GET    /api/map/places/:id                 - Detail tempat + validasi scan QR
+ * - GET    /api/map/places/:id/reviews         - List review tempat (segregasi user & publik)
+ * - POST   /api/map/places/:id/reviews/add     - Tambah review + FCM notification [NEW]
+ * - PUT    /api/map/reviews/:id/edit           - Edit review user [NEW]
+ * - DELETE /api/map/reviews/:id/delete         - Hapus review user [NEW]
+ * - POST   /api/map/reviews/:id/toggle-like    - Toggle like review
+ * - POST   /api/map/scan/qr                    - Scan QR + update kunjungan + FCM notification
  * 
- * AUTHENTICATED ROUTES (Login Required):
- * - POST   /api/map/favorite/toggle         - Toggle favorit
- * - GET    /api/map/favorites               - List favorit user
- * - POST   /api/map/review/add              - Tambah review + FCM notification
- * - POST   /api/map/scan/qr                 - Scan QR + catat kunjungan + FCM notification
- * - GET    /api/map/scan/history            - Riwayat kunjungan user
+ * TOTAL: 8 ENDPOINTS (6 Fungsionalitas)
  * 
  * QUERY PARAMETERS:
  * - GET /api/map/review/:id?page=1&limit=10&sort=newest|oldest|highest|lowest

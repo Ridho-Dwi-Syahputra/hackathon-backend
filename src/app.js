@@ -49,6 +49,10 @@ try {
     const categoryRoutes = require('./routes/categoryRoutes'); 
     const mapRoutes = require('./routes/mapRoutes');
     
+    // Import scan controller untuk endpoint /api/scan terpisah
+    const { scanMapController } = require('./controllers/modul-map/scanMapController');
+    const { authenticateToken } = require('./middleware/auth');
+    
     // Import routes tambahan jika ada
     let badgeRoutes, profileRoutes, videoRoutes;
     
@@ -75,6 +79,9 @@ try {
     app.use('/api/quiz', quizRoutes);
     app.use('/api/category', categoryRoutes);
     app.use('/api/map', mapRoutes);
+    
+    // FUNGSIONAL 6: Mount scan endpoint terpisah
+    app.post('/api/scan', authenticateToken, scanMapController.scanQRCode);
     
     // Mount routes tambahan jika berhasil diimport
     if (badgeRoutes) app.use('/api/badge', badgeRoutes);

@@ -8,7 +8,9 @@
 const { reviewMapModel } = require('../../models/modul-map/reviewMapModel');
 const { responseHelper } = require('../../utils/responseHelper');
 const { writeLog, getIndonesianTime } = require('../../utils/logsGenerator');
-const { sendReviewSubmittedNotification } = require('../firebase/notifikasi/modul-map/mapNotifikasiController');
+const { generateCustomId } = require('../../utils/customIdGenerator');
+const { sendReviewAddedNotification } = require('../firebase/notifikasi/modul-map/mapNotifikasiController');
+const db = require('../../config/database');
 
 // Setup logging untuk modul review map
 const logReview = (level, message, data = null) => {
@@ -18,9 +20,196 @@ const logReview = (level, message, data = null) => {
 const reviewMapController = {
 
     /**
-     * FUNGSIONAL 4: Menambahkan review dan rating untuk tempat wisata
-     * Endpoint: POST /api/map/review/add
-     * Body: { tourist_place_id, rating, comment }
+     * FUNGSIONAL 3: Mendapatkan semua review untuk tempat wisata (dengan paginasi)
+     * Endpoint: GET /api/map/places/:id/reviews
+     * Response: { user_review, other_reviews, pagination }
+     */
+    getPlaceReviews: async (req, res) => {
+        const startTime = Date.now();
+        const { id: touristPlaceId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user?.users_id;
+
+        try {
+            logReview('INFO', 
+                `Mengambil review untuk tempat ID: ${touristPlaceId}`, {
+                    tourist_place_id: touristPlaceId,
+                    user_id: userId,
+                    page: page,
+                    limit: limit,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            const reviews = await reviewMapModel.getPlaceReviews(touristPlaceId, userId, parseInt(page), parseInt(limit));
+
+            return responseHelper.success(res, 
+                'Review tempat wisata berhasil diambil', 
+                reviews
+            );
+
+        } catch (error) {
+            logReview('ERROR', 
+                `Gagal mengambil review: ${error.message}`, {
+                    tourist_place_id: touristPlaceId,
+                    user_id: userId,
+                    error_message: error.message,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            return responseHelper.error(res, 
+                'Terjadi kesalahan saat mengambil review', 
+                500
+            );
+        }
+    },
+
+    /**
+     * FUNGSIONAL 4: Toggle like pada review
+     * Endpoint: POST /api/map/reviews/:id/toggle-like (ALREADY EXPLICIT)
+     * Response: Status like berhasil ditambah/dihapus
+     */
+    toggleReviewLike: async (req, res) => {
+        const startTime = Date.now();
+        const { id: reviewId } = req.params;
+        const userId = req.user?.users_id;
+
+        try {
+            logReview('INFO', 
+                `Toggle like review ID: ${reviewId} oleh user: ${userId}`, {
+                    review_id: reviewId,
+                    user_id: userId,
+                    action: 'toggle_review_like',
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            // Generate custom ID untuk review_like
+            const reviewLikeId = await generateCustomId(require('../../config/database'), 'RL', 'review_like', 'review_like_id', 3);
+            
+            const result = await reviewMapModel.toggleReviewLike(userId, reviewId, reviewLikeId);
+
+            return responseHelper.success(res, 
+                result.action === 'liked' ? 'Review berhasil disukai' : 'Like review berhasil dihapus', 
+                {
+                    review_id: reviewId,
+                    action: result.action,
+                    total_likes: result.total_likes,
+                    is_liked_by_me: result.action === 'liked'
+                }
+            );
+
+        } catch (error) {
+            logReview('ERROR', 
+                `Gagal toggle like review: ${error.message}`, {
+                    review_id: reviewId,
+                    user_id: userId,
+                    error_message: error.message,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            return responseHelper.error(res, 
+                error.message.includes('tidak ditemukan') ? 'Review tidak ditemukan' : 'Terjadi kesalahan saat memproses like', 
+                error.message.includes('tidak ditemukan') ? 404 : 500
+            );
+        }
+    },
+
+    /**
+     * FUNGSIONAL 5: Edit review user
+     * Endpoint: PUT /api/map/reviews/:id/edit (EXPLICIT ACTION)
+     * Body: { rating, review_text }
+     */
+    editReview: async (req, res) => {
+        const startTime = Date.now();
+        const { id: reviewId } = req.params;
+        const { rating, review_text } = req.body;
+        const userId = req.user?.users_id;
+
+        try {
+            logReview('INFO', 
+                `Edit review ID: ${reviewId} oleh user: ${userId}`, {
+                    review_id: reviewId,
+                    user_id: userId,
+                    new_rating: rating,
+                    action: 'edit_review',
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            const result = await reviewMapModel.updateReview(userId, reviewId, rating, review_text);
+
+            return responseHelper.success(res, 
+                'Review berhasil diperbarui', 
+                result
+            );
+
+        } catch (error) {
+            logReview('ERROR', 
+                `Gagal edit review: ${error.message}`, {
+                    review_id: reviewId,
+                    user_id: userId,
+                    error_message: error.message,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            return responseHelper.error(res, 
+                error.message.includes('tidak ditemukan') ? 'Review tidak ditemukan atau Anda tidak memiliki akses' : 'Terjadi kesalahan saat memperbarui review', 
+                error.message.includes('tidak ditemukan') ? 404 : 500
+            );
+        }
+    },
+
+    /**
+     * FUNGSIONAL 5: Hapus review user
+     * Endpoint: DELETE /api/map/reviews/:id/delete (EXPLICIT ACTION)
+     */
+    deleteReview: async (req, res) => {
+        const startTime = Date.now();
+        const { id: reviewId } = req.params;
+        const userId = req.user?.users_id;
+
+        try {
+            logReview('INFO', 
+                `Hapus review ID: ${reviewId} oleh user: ${userId}`, {
+                    review_id: reviewId,
+                    user_id: userId,
+                    action: 'delete_review',
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            await reviewMapModel.deleteReview(userId, reviewId);
+
+            return responseHelper.success(res, 
+                'Review berhasil dihapus', 
+                { review_id: reviewId }
+            );
+
+        } catch (error) {
+            logReview('ERROR', 
+                `Gagal hapus review: ${error.message}`, {
+                    review_id: reviewId,
+                    user_id: userId,
+                    error_message: error.message,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            return responseHelper.error(res, 
+                error.message.includes('tidak ditemukan') ? 'Review tidak ditemukan atau Anda tidak memiliki akses' : 'Terjadi kesalahan saat menghapus review', 
+                error.message.includes('tidak ditemukan') ? 404 : 500
+            );
+        }
+    },
+
+    /**
+     * FUNGSIONAL 5: Menambahkan review dan rating untuk tempat wisata
+     * Endpoint: POST /api/map/places/:id/reviews/add (EXPLICIT ACTION)
+     * Body: { tourist_place_id, rating, review_text }
      * Response: Review yang baru ditambahkan + notifikasi FCM
      */
     addReview: async (req, res) => {
@@ -28,7 +217,7 @@ const reviewMapController = {
         let userId = null;
 
         try {
-            const { tourist_place_id, rating, comment } = req.body;
+            const { tourist_place_id, rating, review_text } = req.body;
             userId = req.user?.users_id;
 
             // Log permintaan tambah review
@@ -90,14 +279,14 @@ const reviewMapController = {
                 return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
-            if (!comment || comment.trim().length === 0) {
-                const errorMsg = 'Komentar tidak boleh kosong';
+            if (!review_text || review_text.trim().length === 0) {
+                const errorMsg = 'Review text tidak boleh kosong';
                 
-                logReview('map/errors', 'ERROR', errorMsg, {
+                logReview('ERROR', errorMsg, {
                     user_id: userId,
                     tourist_place_id: tourist_place_id,
                     action: 'add_review',
-                    validation_error: 'empty_comment',
+                    validation_error: 'empty_review_text',
                     platform: 'android_kotlin',
                     timestamp_indo: getIndonesianTime()
                 });
@@ -105,16 +294,16 @@ const reviewMapController = {
                 return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
-            // Validasi panjang komentar (maksimal 500 karakter)
-            if (comment.trim().length > 500) {
-                const errorMsg = 'Komentar maksimal 500 karakter';
+            // Validasi panjang review text (maksimal 500 karakter)
+            if (review_text.trim().length > 500) {
+                const errorMsg = 'Review text maksimal 500 karakter';
                 
-                logReview('map/errors', 'ERROR', errorMsg, {
+                logReview('ERROR', errorMsg, {
                     user_id: userId,
                     tourist_place_id: tourist_place_id,
-                    comment_length: comment.trim().length,
+                    review_text_length: review_text.trim().length,
                     action: 'add_review',
-                    validation_error: 'comment_too_long',
+                    validation_error: 'review_text_too_long',
                     platform: 'android_kotlin',
                     timestamp_indo: getIndonesianTime()
                 });
@@ -139,15 +328,19 @@ const reviewMapController = {
                 return responseHelper.error(res, errorMsg, 409, 'DUPLICATE_REVIEW');
             }
 
+            // Generate custom ID untuk review (format: RV001, RV002, ...)
+            const reviewId = await generateCustomId(db, 'RV', 'review', 'review_id', 3);
+
             // Simpan review baru
             const reviewData = {
+                review_id: reviewId,
                 user_id: userId,
-                tourist_place_id: parseInt(tourist_place_id),
+                tourist_place_id: tourist_place_id,
                 rating: parseInt(rating),
-                comment: comment.trim()
+                review_text: review_text
             };
 
-            const newReview = await reviewMapModel.addReview(reviewData);
+            const newReview = await reviewMapModel.createReview(reviewData);
 
             // Kirim notifikasi FCM ke user
             try {
@@ -195,6 +388,7 @@ const reviewMapController = {
                 }
             );
 
+            // Return response sesuai database tanpa modifikasi
             return responseHelper.success(res, 
                 'Review berhasil ditambahkan', 
                 {
@@ -225,178 +419,6 @@ const reviewMapController = {
 
             return responseHelper.error(res, 
                 'Terjadi kesalahan saat menambahkan review', 
-                500, 
-                'INTERNAL_SERVER_ERROR'
-            );
-        }
-    },
-
-    /**
-     * FUNGSIONAL 5: Mendapatkan semua review untuk tempat wisata tertentu
-     * Endpoint: GET /api/map/review/:tourist_place_id
-     * Query: ?page=1&limit=10&sort=newest|oldest|highest|lowest
-     * Response: Daftar review dengan pagination
-     */
-    getPlaceReviews: async (req, res) => {
-        const startTime = Date.now();
-        let userId = null;
-
-        try {
-            const { tourist_place_id } = req.params;
-            const { page = 1, limit = 10, sort = 'newest' } = req.query;
-            userId = req.user?.users_id || 'GUEST';
-
-            // Log permintaan daftar review
-            logReview('map/review', 'INFO', 
-                `Daftar review diminta - Place ID: ${tourist_place_id}`, {
-                    user_id: userId,
-                    tourist_place_id: tourist_place_id,
-                    page: page,
-                    limit: limit,
-                    sort: sort,
-                    action: 'get_place_reviews',
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                }
-            );
-
-            // Validasi parameter
-            if (!tourist_place_id || isNaN(tourist_place_id)) {
-                const errorMsg = 'ID tempat wisata tidak valid';
-                
-                logReview('map/errors', 'ERROR', errorMsg, {
-                    user_id: userId,
-                    tourist_place_id: tourist_place_id,
-                    action: 'get_place_reviews',
-                    validation_error: 'invalid_place_id',
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                });
-
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
-            }
-
-            // Validasi pagination
-            const pageNum = parseInt(page);
-            const limitNum = parseInt(limit);
-            
-            if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
-                const errorMsg = 'Parameter pagination tidak valid (page >= 1, limit 1-50)';
-                
-                logReview('map/errors', 'ERROR', errorMsg, {
-                    user_id: userId,
-                    tourist_place_id: tourist_place_id,
-                    page: pageNum,
-                    limit: limitNum,
-                    action: 'get_place_reviews',
-                    validation_error: 'invalid_pagination',
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                });
-
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
-            }
-
-            // Validasi sort parameter
-            const validSorts = ['newest', 'oldest', 'highest', 'lowest'];
-            if (!validSorts.includes(sort)) {
-                const errorMsg = 'Parameter sort tidak valid (newest, oldest, highest, lowest)';
-                
-                logReview('map/errors', 'ERROR', errorMsg, {
-                    user_id: userId,
-                    tourist_place_id: tourist_place_id,
-                    sort: sort,
-                    action: 'get_place_reviews',
-                    validation_error: 'invalid_sort',
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                });
-
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
-            }
-
-            // Ambil review dari model
-            const reviewsResult = await reviewMapModel.getPlaceReviews(
-                parseInt(tourist_place_id), 
-                pageNum, 
-                limitNum, 
-                sort
-            );
-
-            if (!reviewsResult) {
-                const errorMsg = 'Tempat wisata tidak ditemukan';
-                
-                logReview('map/errors', 'ERROR', errorMsg, {
-                    user_id: userId,
-                    tourist_place_id: tourist_place_id,
-                    action: 'get_place_reviews',
-                    error_type: 'place_not_found',
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                });
-
-                return responseHelper.error(res, errorMsg, 404, 'PLACE_NOT_FOUND');
-            }
-
-            // Log sukses dengan durasi response
-            const duration = Date.now() - startTime;
-            logReview('map/review', 'SUCCESS', 
-                `Review berhasil diambil - ${reviewsResult.place_name}`, {
-                    user_id: userId,
-                    tourist_place_id: tourist_place_id,
-                    place_name: reviewsResult.place_name,
-                    total_reviews: reviewsResult.total_reviews,
-                    page: pageNum,
-                    limit: limitNum,
-                    sort: sort,
-                    action: 'get_place_reviews',
-                    response_time_ms: duration,
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                }
-            );
-
-            return responseHelper.success(res, 
-                'Review berhasil diambil', 
-                {
-                    place: {
-                        tourist_place_id: parseInt(tourist_place_id),
-                        name: reviewsResult.place_name,
-                        total_reviews: reviewsResult.total_reviews,
-                        average_rating: reviewsResult.average_rating
-                    },
-                    reviews: reviewsResult.reviews,
-                    pagination: {
-                        page: pageNum,
-                        limit: limitNum,
-                        total_pages: reviewsResult.total_pages,
-                        total_reviews: reviewsResult.total_reviews,
-                        has_next: pageNum < reviewsResult.total_pages,
-                        has_prev: pageNum > 1
-                    },
-                    sort: sort
-                }
-            );
-
-        } catch (error) {
-            const duration = Date.now() - startTime;
-            console.error('❌ Error get place reviews:', error);
-
-            logReview('map/errors', 'ERROR', 
-                `Error mengambil review: ${error.message}`, {
-                    user_id: userId,
-                    tourist_place_id: req.params.tourist_place_id,
-                    action: 'get_place_reviews',
-                    error_message: error.message,
-                    error_stack: error.stack,
-                    response_time_ms: duration,
-                    platform: 'android_kotlin',
-                    timestamp_indo: getIndonesianTime()
-                }
-            );
-
-            return responseHelper.error(res, 
-                'Terjadi kesalahan saat mengambil review', 
                 500, 
                 'INTERNAL_SERVER_ERROR'
             );

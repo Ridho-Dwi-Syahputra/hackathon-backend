@@ -42,7 +42,7 @@ async function testEndpointAnalyzer() {
         const analyzer = require('../src/utils/endpointAnalyzer').EndpointAnalyzer;
         const analyzerInstance = new analyzer();
         await analyzerInstance.generateEndpointReport();
-        const exportResult = analyzerInstance.exportToJson('./endpoint-analysis.json');
+        const exportResult = analyzerInstance.exportToJson('./test/endpoint-analysis.json');
         
         console.log('\n✅ Test completed successfully!');
         

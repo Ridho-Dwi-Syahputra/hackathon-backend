@@ -1,11 +1,11 @@
 {
-  "generated_at": "2025-11-30T17:12:39.795Z",
-  "total_endpoints": 29,
+  "generated_at": "2025-12-02T08:56:29.334Z",
+  "total_endpoints": 30,
   "by_method": {
     "POST": 9,
-    "GET": 14,
-    "PUT": 5,
-    "DELETE": 1
+    "GET": 13,
+    "PUT": 6,
+    "DELETE": 2
   },
   "by_module": {
     "auth": {
@@ -68,35 +68,39 @@
       ]
     },
     "map": {
-      "count": 7,
+      "count": 8,
       "endpoints": [
         {
           "method": "GET",
-          "path": "/api/map/detail/:id"
-        },
-        {
-          "method": "POST",
-          "path": "/api/map/favorite/toggle"
+          "path": "/api/map/places"
         },
         {
           "method": "GET",
-          "path": "/api/map/favorites"
-        },
-        {
-          "method": "POST",
-          "path": "/api/map/review/add"
+          "path": "/api/map/places/:id"
         },
         {
           "method": "GET",
-          "path": "/api/map/review/:tourist_place_id"
+          "path": "/api/map/places/:id/reviews"
+        },
+        {
+          "method": "POST",
+          "path": "/api/map/places/:id/reviews/add"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/map/reviews/:id/edit"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/map/reviews/:id/delete"
+        },
+        {
+          "method": "POST",
+          "path": "/api/map/reviews/:id/toggle-like"
         },
         {
           "method": "POST",
           "path": "/api/map/scan/qr"
-        },
-        {
-          "method": "GET",
-          "path": "/api/map/scan/history"
         }
       ]
     },
@@ -240,36 +244,50 @@
     },
     {
       "method": "GET",
-      "path": "/detail/:id",
-      "fullPath": "/api/map/detail/:id",
-      "module": "map",
-      "file": "mapRoutes.js"
-    },
-    {
-      "method": "POST",
-      "path": "/favorite/toggle",
-      "fullPath": "/api/map/favorite/toggle",
+      "path": "/places",
+      "fullPath": "/api/map/places",
       "module": "map",
       "file": "mapRoutes.js"
     },
     {
       "method": "GET",
-      "path": "/favorites",
-      "fullPath": "/api/map/favorites",
-      "module": "map",
-      "file": "mapRoutes.js"
-    },
-    {
-      "method": "POST",
-      "path": "/review/add",
-      "fullPath": "/api/map/review/add",
+      "path": "/places/:id",
+      "fullPath": "/api/map/places/:id",
       "module": "map",
       "file": "mapRoutes.js"
     },
     {
       "method": "GET",
-      "path": "/review/:tourist_place_id",
-      "fullPath": "/api/map/review/:tourist_place_id",
+      "path": "/places/:id/reviews",
+      "fullPath": "/api/map/places/:id/reviews",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/places/:id/reviews/add",
+      "fullPath": "/api/map/places/:id/reviews/add",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/reviews/:id/edit",
+      "fullPath": "/api/map/reviews/:id/edit",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "DELETE",
+      "path": "/reviews/:id/delete",
+      "fullPath": "/api/map/reviews/:id/delete",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/reviews/:id/toggle-like",
+      "fullPath": "/api/map/reviews/:id/toggle-like",
       "module": "map",
       "file": "mapRoutes.js"
     },
@@ -277,13 +295,6 @@
       "method": "POST",
       "path": "/scan/qr",
       "fullPath": "/api/map/scan/qr",
-      "module": "map",
-      "file": "mapRoutes.js"
-    },
-    {
-      "method": "GET",
-      "path": "/scan/history",
-      "fullPath": "/api/map/scan/history",
       "module": "map",
       "file": "mapRoutes.js"
     },
@@ -369,7 +380,7 @@
     "   🔐 Auth: 7 endpoints",
     "   🏆 Badge: 2 endpoints",
     "   📁 Categoryroutes.js: 2 endpoints",
-    "   🗺️ Map: 7 endpoints",
+    "   🗺️ Map: 8 endpoints",
     "   👤 Profile: 4 endpoints",
     "   ❓ Quiz: 2 endpoints",
     "   📹 Video: 5 endpoints"
