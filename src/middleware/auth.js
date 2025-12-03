@@ -20,11 +20,11 @@ const authMiddleware = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Check if token exists in database and is valid
-    // UPDATE: Include fcm_token dan notification_preferences
-    const [users] = await db.query(
-      'SELECT users_id, email, full_name, status, fcm_token, notification_preferences FROM users WHERE users_id = ? AND token = ? AND status = "active"',
-      [decoded.userId, token]
+    // Check if user exists and is active
+    // Get user data untuk attach ke request (include total_xp, user_image_url for map module compatibility)
+    const users = await db.query(
+      'SELECT users_id, email, full_name, total_xp, status, user_image_url, fcm_token, notification_preferences FROM users WHERE users_id = ? AND status = "active"',
+      [decoded.users_id]
     );
 
     if (users.length === 0) {
@@ -44,8 +44,17 @@ const authMiddleware = async (req, res, next) => {
       }
     }
 
-    // Attach user to request
-    req.user = user;
+    // Attach user to request with complete structure for map module compatibility
+    req.user = {
+      users_id: user.users_id,
+      email: user.email,
+      full_name: user.full_name,
+      total_xp: user.total_xp || 0,
+      status: user.status,
+      user_image_url: user.user_image_url,
+      fcm_token: user.fcm_token,
+      notification_preferences: user.notification_preferences
+    };
     req.token = token;
     
     next();

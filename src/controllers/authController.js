@@ -2,8 +2,10 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../config/database');
 const { sendNotification } = require('./firebase/firebaseConfig');
+
+// Import Models
+const AuthModel = require('../models/authModel');
 
 // Import Utils
 const { generateCustomId } = require('../utils/customIdGenerator');
@@ -48,26 +50,6 @@ const logError = async (errorType, error, data) => {
         timestamp_indo: getIndonesianTime(),
         ...data
     });
-};
-
-// Helper function untuk find user by email
-const findUserByEmail = async (email) => {
-    try {
-        const result = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-        return result.length > 0 ? result[0] : null;
-    } catch (error) {
-        throw error;
-    }
-};
-
-// Helper function untuk find user by ID
-const findUserById = async (userId) => {
-    try {
-        const result = await db.query('SELECT * FROM users WHERE users_id = ?', [userId]);
-        return result.length > 0 ? result[0] : null;
-    } catch (error) {
-        throw error;
-    }
 };
 
 /**
@@ -125,7 +107,7 @@ exports.register = async (req, res, next) => {
         }
 
         // Cek email sudah terdaftar atau belum
-        const existingUser = await findUserByEmail(email);
+        const existingUser = await AuthModel.findUserByEmail(email);
         if (existingUser) {
             await logAuth('register', 'failed', {
                 email,
@@ -137,7 +119,7 @@ exports.register = async (req, res, next) => {
         }
 
         // Generate custom user ID
-        const users_id = await generateCustomId(db, 'U', 'users', 'users_id', 3);
+        const users_id = await generateCustomId(require('../config/database'), 'U', 'users', 'users_id', 3);
         
         await logActivity('user_id_generated', 'success', {
             generated_id: users_id,
@@ -148,57 +130,34 @@ exports.register = async (req, res, next) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // Default values
+        // Default values sesuai implementasi aktual (2 map notifications only)
         const defaultNotificationPreferences = {
-            quiz_reminder: true,
-            achievement_unlock: true,
-            cultural_event: true,
-            weekly_challenge: true,
-            friend_activity: false,
-            marketing: false
+            // System notifications (basic)
+            system_announcements: true,
+            marketing: false,
+            
+            // Map module notifications (hanya 2 yang diimplementasikan)
+            map_notifications: {
+                review_added: true,      // dari sendReviewAddedNotification()
+                place_visited: true      // dari sendPlaceVisitedNotification() 
+            }
+            
+            // TODO: Quiz system belum ada di sako.sql - akan diaktifkan nanti
+            // quiz_reminder: true,
+            // achievement_unlock: true,
         };
 
-        // Insert user ke database
-        const insertQuery = `
-            INSERT INTO users (
-                users_id, 
-                full_name, 
-                email, 
-                password, 
-                total_xp, 
-                status, 
-                user_image_url, 
-                fcm_token,
-                notification_preferences,
-                created_at, 
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-        `;
-
-        await db.query(insertQuery, [
+        // Create user through model
+        const userData = {
             users_id,
             full_name,
             email,
             hashedPassword,
-            0, // default total_xp
-            'active', // default status
-            null, // default user_image_url
-            fcm_token || null,
-            JSON.stringify(defaultNotificationPreferences)
-        ]);
-
-        // Insert initial XP record
-        const xpQuery = `
-            INSERT INTO user_points (users_id, points_earned, activity_type, description, created_at)
-            VALUES (?, ?, ?, ?, NOW())
-        `;
+            fcm_token,
+            notification_preferences: defaultNotificationPreferences
+        };
         
-        await db.query(xpQuery, [
-            users_id,
-            0,
-            'registration',
-            'Initial registration'
-        ]);
+        const createdUser = await AuthModel.createUser(userData);
 
         const processingTime = Date.now() - startTime;
 
@@ -213,13 +172,7 @@ exports.register = async (req, res, next) => {
         }, 'modul-autentikasi');
 
         // Response success
-        return createdResponse(res, {
-            users_id,
-            full_name,
-            email,
-            total_xp: 0,
-            status: 'active'
-        }, 'Pendaftaran berhasil');
+        return createdResponse(res, createdUser, 'Pendaftaran berhasil');
 
     } catch (error) {
         const processingTime = Date.now() - startTime;
@@ -264,7 +217,7 @@ exports.login = async (req, res, next) => {
         }
 
         // Cari user berdasarkan email
-        const user = await findUserByEmail(email);
+        const user = await AuthModel.findUserByEmail(email);
         if (!user) {
             await logAuth('login', 'failed', {
                 email,
@@ -309,16 +262,35 @@ exports.login = async (req, res, next) => {
         };
 
         const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-            expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+            expiresIn: '30d'  // Changed from 24h to 30 days for auto-login
         });
+
+        // Calculate token expiry date for database storage (30 days)
+        const expiresInDays = 30;
+        const tokenExpiryDate = new Date();
+        tokenExpiryDate.setDate(tokenExpiryDate.getDate() + expiresInDays);
+
+        // Save token to database
+        try {
+            await AuthModel.saveToken(user.users_id, token, tokenExpiryDate);
+            
+            await logActivity('token_saved_to_db', 'success', {
+                users_id: user.users_id,
+                token_expiry: tokenExpiryDate.toISOString(),
+                auto_login_days: 30
+            }, 'modul-autentikasi');
+        } catch (tokenSaveError) {
+            await logError('token_save_error', tokenSaveError, {
+                users_id: user.users_id,
+                email: user.email
+            }, 'modul-autentikasi');
+            // Continue with login even if token save fails
+        }
 
         // Update FCM token jika disediakan
         if (fcm_token) {
             try {
-                await db.query(
-                    'UPDATE users SET fcm_token = ?, updated_at = NOW() WHERE users_id = ?',
-                    [fcm_token, user.users_id]
-                );
+                await AuthModel.updateFcmToken(user.users_id, fcm_token);
                 
                 await logActivity('fcm_token_updated', 'success', {
                     users_id: user.users_id,
@@ -333,10 +305,7 @@ exports.login = async (req, res, next) => {
         }
 
         // Update last login
-        await db.query(
-            'UPDATE users SET updated_at = NOW() WHERE users_id = ?',
-            [user.users_id]
-        );
+        await AuthModel.updateLastLogin(user.users_id);
 
         const processingTime = Date.now() - startTime;
 
@@ -404,17 +373,16 @@ exports.logout = async (req, res, next) => {
             ip: req.ip
         }, 'modul-autentikasi');
 
-        // Clear FCM token
-        await db.query(
-            'UPDATE users SET fcm_token = NULL, updated_at = NOW() WHERE users_id = ?',
-            [userId]
-        );
+        // Clear FCM token and database token
+        await AuthModel.clearFcmToken(userId);
+        await AuthModel.clearToken(userId);
 
         // Log successful logout
         await logAuth('logout', 'success', {
             users_id: userId,
             ip: req.ip,
-            fcm_token_cleared: true
+            fcm_token_cleared: true,
+            database_token_cleared: true
         }, 'modul-autentikasi');
 
         return successResponse(res, null, 'Logout berhasil');
@@ -444,7 +412,7 @@ exports.getProfile = async (req, res, next) => {
         }, 'modul-autentikasi');
 
         // Get user data
-        const user = await findUserById(userId);
+        const user = await AuthModel.findUserById(userId);
         if (!user) {
             await logActivity('profile_access', 'failed', {
                 users_id: userId,
@@ -520,10 +488,7 @@ exports.updateFcmToken = async (req, res, next) => {
         }
 
         // Update FCM token
-        await db.query(
-            'UPDATE users SET fcm_token = ?, updated_at = NOW() WHERE users_id = ?',
-            [fcm_token, userId]
-        );
+        await AuthModel.updateFcmToken(userId, fcm_token);
 
         // Log successful FCM update
         await logActivity('fcm_update', 'success', {
@@ -563,27 +528,47 @@ exports.updateNotificationPreferences = async (req, res, next) => {
             return validationErrorResponse(res, 'Notification preferences harus berupa object');
         }
 
-        // Validate notification preferences structure
-        const validKeys = ['quiz_reminder', 'achievement_unlock', 'cultural_event', 'weekly_challenge', 'friend_activity', 'marketing'];
+        // Validate notification preferences structure sesuai implementasi aktual
+        const validTopLevelKeys = ['system_announcements', 'marketing', 'map_notifications'];
+        const validMapNotificationKeys = ['review_added', 'place_visited']; // Hanya 2 yang ada
+        
+        // TODO: Aktifkan setelah quiz system ada di database
+        // const validQuizKeys = ['quiz_reminder', 'achievement_unlock'];
+        
         const providedKeys = Object.keys(notification_preferences);
         
-        const invalidKeys = providedKeys.filter(key => !validKeys.includes(key));
+        const invalidKeys = providedKeys.filter(key => !validTopLevelKeys.includes(key));
         if (invalidKeys.length > 0) {
             await logActivity('notification_preferences_update', 'failed', {
                 users_id: userId,
-                reason: 'Invalid keys',
+                reason: 'Invalid top-level keys',
                 invalid_keys: invalidKeys,
+                valid_keys: validTopLevelKeys,
                 ip: req.ip
             }, 'modul-autentikasi');
             
-            return validationErrorResponse(res, `Invalid notification preference keys: ${invalidKeys.join(', ')}`);
+            return validationErrorResponse(res, `Invalid notification preference keys: ${invalidKeys.join(', ')}. Valid keys: ${validTopLevelKeys.join(', ')}`);
+        }
+        
+        // Validate map_notifications structure if provided
+        if (notification_preferences.map_notifications) {
+            const mapKeys = Object.keys(notification_preferences.map_notifications);
+            const invalidMapKeys = mapKeys.filter(key => !validMapNotificationKeys.includes(key));
+            if (invalidMapKeys.length > 0) {
+                await logActivity('notification_preferences_update', 'failed', {
+                    users_id: userId,
+                    reason: 'Invalid map notification keys',
+                    invalid_map_keys: invalidMapKeys,
+                    valid_map_keys: validMapNotificationKeys,
+                    ip: req.ip
+                }, 'modul-autentikasi');
+                
+                return validationErrorResponse(res, `Invalid map notification keys: ${invalidMapKeys.join(', ')}. Valid keys: ${validMapNotificationKeys.join(', ')}`);
+            }
         }
 
         // Update notification preferences
-        await db.query(
-            'UPDATE users SET notification_preferences = ?, updated_at = NOW() WHERE users_id = ?',
-            [JSON.stringify(notification_preferences), userId]
-        );
+        await AuthModel.updateNotificationPreferences(userId, notification_preferences);
 
         // Log successful update
         await logActivity('notification_preferences_update', 'success', {
@@ -619,40 +604,42 @@ exports.getNotificationPreferences = async (req, res, next) => {
         }, 'modul-autentikasi');
 
         // Get user notification preferences
-        const result = await db.query(
-            'SELECT notification_preferences FROM users WHERE users_id = ?',
-            [userId]
-        );
+        const result = await AuthModel.getNotificationPreferences(userId);
 
-        if (result.length === 0) {
+        if (!result) {
             return notFoundResponse(res, 'User tidak ditemukan');
         }
 
         let notificationPreferences = null;
         try {
-            notificationPreferences = result[0].notification_preferences ? 
-                JSON.parse(result[0].notification_preferences) : {
-                    quiz_reminder: true,
-                    achievement_unlock: true,
-                    cultural_event: true,
-                    weekly_challenge: true,
-                    friend_activity: false,
-                    marketing: false
+            notificationPreferences = result.notification_preferences ? 
+                JSON.parse(result.notification_preferences) : {
+                    // Default structure sesuai implementasi aktual
+                    system_announcements: true,
+                    marketing: false,
+                    map_notifications: {
+                        review_added: true,      // sendReviewAddedNotification()
+                        place_visited: true      // sendPlaceVisitedNotification()
+                    }
+                    // TODO: Quiz system belum ada di sako.sql
+                    // quiz_reminder: true,
+                    // achievement_unlock: true,
                 };
         } catch (parseError) {
             await logError('notification_preferences_parse_error', parseError, {
                 users_id: userId,
-                raw_data: result[0].notification_preferences
+                raw_data: result.notification_preferences
             }, 'modul-autentikasi');
             
-            // Return default preferences jika parse error
+            // Return default preferences jika parse error (sesuai implementasi aktual)
             notificationPreferences = {
-                quiz_reminder: true,
-                achievement_unlock: true,
-                cultural_event: true,
-                weekly_challenge: true,
-                friend_activity: false,
-                marketing: false
+                system_announcements: true,
+                marketing: false,
+                map_notifications: {
+                    review_added: true,      // Dari mapNotifikasiController.js
+                    place_visited: true      // Dari mapNotifikasiController.js
+                }
+                // TODO: Quiz system belum diimplementasikan di sako.sql
             };
         }
 
@@ -666,6 +653,117 @@ exports.getNotificationPreferences = async (req, res, next) => {
 
     } catch (error) {
         await logError('get_notification_preferences_error', error, {
+            users_id: req.user?.users_id,
+            ip: req.ip,
+            stack: error.stack
+        }, 'modul-autentikasi');
+        
+        next(error);
+    }
+};
+
+/**
+ * FUNGSIONAL AUTH BARU: Auto Login (30 Days Token Validation)
+ * Untuk auto-login user tanpa perlu input password lagi
+ */
+exports.autoLogin = async (req, res, next) => {
+    try {
+        const userId = req.user.users_id;
+
+        // Log auto login
+        await logActivity('auto_login', 'success', {
+            users_id: userId,
+            ip: req.ip,
+            token_expires: req.user.token_validity,
+            remaining_days: Math.ceil((new Date(req.user.token_validity) - new Date()) / (1000 * 60 * 60 * 24))
+        }, 'modul-autentikasi');
+
+        // Return user data sama seperti login biasa
+        return successResponse(res, {
+            token: req.token, // Token yang sudah ada
+            user: {
+                users_id: req.user.users_id,
+                email: req.user.email,
+                full_name: req.user.full_name,
+                total_xp: req.user.total_xp || 0,
+                status: req.user.status,
+                user_image_url: req.user.user_image_url,
+                fcm_token: req.user.fcm_token,
+                notification_preferences: req.user.notification_preferences
+            }
+        }, 'Auto-login berhasil');
+
+    } catch (error) {
+        await logError('auto_login_error', error, {
+            users_id: req.user?.users_id,
+            ip: req.ip,
+            stack: error.stack
+        }, 'modul-autentikasi');
+        
+        next(error);
+    }
+};
+
+/**
+ * FUNGSIONAL AUTH BARU: Revoke Token (Force Logout)
+ * Untuk force logout user dari semua device
+ */
+exports.revokeToken = async (req, res, next) => {
+    try {
+        const userId = req.user.users_id;
+
+        // Log revoke attempt
+        await logActivity('token_revoke', 'attempt', {
+            users_id: userId,
+            ip: req.ip
+        }, 'modul-autentikasi');
+
+        // Clear token dari database
+        await AuthModel.clearToken(userId);
+
+        // Log successful revoke
+        await logActivity('token_revoke', 'success', {
+            users_id: userId,
+            ip: req.ip
+        }, 'modul-autentikasi');
+
+        return successResponse(res, null, 'Token berhasil dicabut. Silakan login kembali.');
+
+    } catch (error) {
+        await logError('revoke_token_error', error, {
+            users_id: req.user?.users_id,
+            ip: req.ip,
+            stack: error.stack
+        }, 'modul-autentikasi');
+        
+        next(error);
+    }
+};
+
+/**
+ * FUNGSIONAL AUTH BARU: Validate Token
+ * Untuk check apakah token masih valid
+ */
+exports.validateToken = async (req, res, next) => {
+    try {
+        const userId = req.user.users_id;
+
+        // Log validation
+        await logActivity('token_validation', 'success', {
+            users_id: userId,
+            ip: req.ip,
+            token_expires: req.user.token_validity
+        }, 'modul-autentikasi');
+
+        return successResponse(res, {
+            valid: true,
+            users_id: userId,
+            email: req.user.email,
+            expires_at: req.user.token_validity
+        }, 'Token masih valid');
+
+    } catch (error) {
+        await logError('validate_token_error', error, {
             users_id: req.user?.users_id,
             ip: req.ip,
             stack: error.stack

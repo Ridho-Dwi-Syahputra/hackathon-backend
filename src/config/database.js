@@ -146,7 +146,12 @@ module.exports = {
     sequelize,
     testDatabaseConnection,    // EXPORT FUNCTION INI
     testSequelizeConnection,
-    initializeDatabase
+    initializeDatabase,
+    // Query function untuk backward compatibility
+    query: async (sql, params) => {
+        const [rows] = await pool.execute(sql, params);
+        return rows;
+    }
 };
 
 // Default export tetap pool untuk backward compatibility

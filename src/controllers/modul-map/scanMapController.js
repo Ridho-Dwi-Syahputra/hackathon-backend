@@ -101,7 +101,7 @@ const scanMapController = {
             
             // Jika user sudah pernah berkunjung (status 'visited'), berikan pesan khusus
             if (existingVisit && existingVisit.status === 'visited') {
-                const errorMsg = `Anda telah berkunjung ke ${touristPlace.name}`;
+                const errorMsg = `Anda telah berkunjung ke ${touristPlace.name} pada ${existingVisit.visited_at}`;
                 
                 logScan('INFO', 
                     `User sudah pernah berkunjung ke tempat ini`, {
@@ -120,12 +120,31 @@ const scanMapController = {
             }
             
             let visitData = null;
-            let isFirstVisitToday = true;
 
-            if (existingVisit && existingVisit.status === 'not_visited') {
-                // Update status dari 'not_visited' menjadi 'visited'
-                visitData = await scanMapModel.updateVisitToVisited(userId, touristPlace.tourist_place_id);
-                isFirstVisitToday = true;
+            // Validasi: Harus ada record 'not_visited' di user_visit
+            if (!existingVisit || existingVisit.status !== 'not_visited') {
+                const errorMsg = 'Data kunjungan tidak ditemukan. Silakan hubungi administrator.';
+                
+                logScan('ERROR', 
+                    `Record user_visit tidak ditemukan atau status tidak valid`, {
+                        user_id: userId,
+                        tourist_place_id: touristPlace.tourist_place_id,
+                        place_name: touristPlace.name,
+                        existing_visit: existingVisit,
+                        action: 'scan_qr_code_no_visit_record',
+                        platform: 'android_kotlin',
+                        timestamp_indo: getIndonesianTime()
+                    }
+                );
+
+                return responseHelper.error(res, errorMsg, 404, 'VISIT_RECORD_NOT_FOUND');
+            }
+
+            // Update status dari 'not_visited' menjadi 'visited' dengan visited_at = NOW()
+            await scanMapModel.updateVisitToVisited(userId, touristPlace.tourist_place_id);
+            
+            // Ambil data visit yang sudah di-update
+            visitData = await scanMapModel.getUserVisit(userId, touristPlace.tourist_place_id);
                 
                 // Kirim notifikasi FCM untuk kunjungan pertama
                 try {
@@ -160,20 +179,6 @@ const scanMapController = {
                         }
                     );
                 }
-            } else {
-                // Tidak seharusnya sampai sini karena semua user punya record 'not_visited' by default
-                // Generate custom ID untuk user visit sebagai fallback
-                const userVisitId = await generateCustomId(db, 'UV', 'user_visit', 'user_visit_id', 3);
-                
-                // Buat record kunjungan baru dengan custom ID
-                visitData = await scanMapModel.createUserVisit({
-                    user_visit_id: userVisitId,
-                    user_id: userId,
-                    tourist_place_id: touristPlace.tourist_place_id,
-                    status: 'visited'
-                });
-                isFirstVisitToday = true;
-            }
 
             // Format response untuk Android
             const response = {
@@ -194,8 +199,7 @@ const scanMapController = {
                     status: visitData.status,
                     visited_at: visitData.visited_at,
                     created_at: visitData.created_at,
-                    updated_at: visitData.updated_at,
-                    is_first_visit: isFirstVisitToday
+                    updated_at: visitData.updated_at
                 },
                 qr_code_info: {
                     qr_code_value: qr_code_value.trim(),
@@ -212,17 +216,14 @@ const scanMapController = {
                     place_name: touristPlace.name,
                     qr_code_value: qr_code_value,
                     visit_id: visitData.user_visit_id,
-                    is_first_visit: isFirstVisitToday,
-                    action: 'scan_qr_code',
+                    action: 'scan_qr_code_success',
                     response_time_ms: duration,
                     platform: 'android_kotlin',
                     timestamp_indo: getIndonesianTime()
                 }
             );
 
-            const message = isFirstVisitToday 
-                ? `Selamat datang di ${touristPlace.name}! Kunjungan Anda telah tercatat.`
-                : `Selamat datang kembali di ${touristPlace.name}!`;
+            const message = `Selamat datang di ${touristPlace.name}! Kunjungan Anda telah tercatat pada ${visitData.visited_at}.`;
 
             return responseHelper.success(res, message, response);
 

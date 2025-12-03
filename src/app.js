@@ -3,6 +3,10 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// Import URL configuration helper
+const UrlConfig = require('./utils/urlConfig');
+const urlConfig = new UrlConfig();
+
 const app = express();
 
 // Logging middleware
@@ -11,14 +15,9 @@ app.use((req, res, next) => {
     next();
 });
 
-// CORS configuration
+// CORS configuration with flexible origins using UrlConfig
 app.use(cors({
-    origin: [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:8080',
-        'http://10.0.2.2:3000'
-    ],
+    origin: urlConfig.getCorsOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -31,13 +30,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Health check endpoint
+// Health check endpoint with dynamic URL info
 app.get('/', (req, res) => {
+    const serverInfo = urlConfig.getServerInfo();
+    const baseUrl = urlConfig.getApiBaseUrl();
+    
     res.json({
         success: true,
         message: 'SAKO Backend API is running!',
         timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        server_info: serverInfo,
+        endpoints: {
+            auth: `${baseUrl}/api/auth`,
+            map: `${baseUrl}/api/map`,
+            scan: `${baseUrl}/api/scan`
+        },
+        android_config: urlConfig.generateAndroidConfig()
     });
 });
 
@@ -46,12 +54,12 @@ try {
     // Import routes yang ada
     const authRoutes = require('./routes/authRoutes');
     const quizRoutes = require('./routes/quizRoutes');
-    const categoryRoutes = require('./routes/categoryRoutes'); 
+    const categoryRoutes = require('./routes/categoryroutes'); 
     const mapRoutes = require('./routes/mapRoutes');
     
     // Import scan controller untuk endpoint /api/scan terpisah
     const { scanMapController } = require('./controllers/modul-map/scanMapController');
-    const { authenticateToken } = require('./middleware/auth');
+    const authMiddleware = require('./middleware/auth');
     
     // Import routes tambahan jika ada
     let badgeRoutes, profileRoutes, videoRoutes;
@@ -81,7 +89,7 @@ try {
     app.use('/api/map', mapRoutes);
     
     // FUNGSIONAL 6: Mount scan endpoint terpisah
-    app.post('/api/scan', authenticateToken, scanMapController.scanQRCode);
+    app.post('/api/scan', authMiddleware, scanMapController.scanQRCode);
     
     // Mount routes tambahan jika berhasil diimport
     if (badgeRoutes) app.use('/api/badge', badgeRoutes);

@@ -112,7 +112,7 @@ class ScanMapModel {
      * Update visit status to visited
      * @param {string} userId - User ID
      * @param {string} touristPlaceId - Tourist place ID
-     * @returns {Promise<Object>} Update result
+     * @returns {Promise<Object>} Updated visit record
      */
     static async updateVisitToVisited(userId, touristPlaceId) {
         try {
@@ -126,7 +126,9 @@ class ScanMapModel {
             `;
 
             const result = await db.query(updateQuery, [userId, touristPlaceId]);
-            return result;
+            
+            // Return the updated visit record
+            return await this.getUserVisit(userId, touristPlaceId);
         } catch (error) {
             console.error('Error updating visit to visited:', error);
             throw error;

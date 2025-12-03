@@ -1,15 +1,15 @@
 {
-  "generated_at": "2025-12-02T08:56:29.334Z",
-  "total_endpoints": 30,
+  "generated_at": "2025-12-02T17:55:52.418Z",
+  "total_endpoints": 35,
   "by_method": {
-    "POST": 9,
-    "GET": 13,
+    "POST": 11,
+    "GET": 16,
     "PUT": 6,
     "DELETE": 2
   },
   "by_module": {
     "auth": {
-      "count": 7,
+      "count": 12,
       "endpoints": [
         {
           "method": "POST",
@@ -38,6 +38,26 @@
         {
           "method": "GET",
           "path": "/api/auth/notification-preferences"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/revoke-token"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/validate-token"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/auto-login"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/logout-db"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/profile-db"
         }
       ]
     },
@@ -215,6 +235,41 @@
       "file": "authRoutes.js"
     },
     {
+      "method": "POST",
+      "path": "/revoke-token",
+      "fullPath": "/api/auth/revoke-token",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/validate-token",
+      "fullPath": "/api/auth/validate-token",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auto-login",
+      "fullPath": "/api/auth/auto-login",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/logout-db",
+      "fullPath": "/api/auth/logout-db",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/profile-db",
+      "fullPath": "/api/auth/profile-db",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
       "method": "GET",
       "path": "/",
       "fullPath": "/api/badge/",
@@ -377,7 +432,7 @@
     }
   ],
   "formatted_list": [
-    "   🔐 Auth: 7 endpoints",
+    "   🔐 Auth: 12 endpoints",
     "   🏆 Badge: 2 endpoints",
     "   📁 Categoryroutes.js: 2 endpoints",
     "   🗺️ Map: 8 endpoints",

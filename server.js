@@ -1,11 +1,13 @@
 require('dotenv').config();
 const app = require('./src/app');
 const { getServerEndpointLogs } = require('./src/utils/endpointAnalyzer');
+const UrlConfig = require('./src/utils/urlConfig');
 
 // Import Firebase initialization
 require('./src/controllers/firebase/firebaseConfig');
 
 const PORT = process.env.PORT || 3000;
+const urlConfig = new UrlConfig();
 
 const startServer = async () => {
     try {
@@ -33,7 +35,10 @@ const startServer = async () => {
             console.log('\n' + '='.repeat(60));
             console.log('🎉 SERVER SAKO BERHASIL BERJALAN!');
             console.log('='.repeat(60));
-            console.log(`📡 Server: http://localhost:${PORT}`);
+            
+            // Print URL configuration using UrlConfig
+            urlConfig.printStartupInfo();
+            
             console.log(`🔥 Environment: ${process.env.NODE_ENV || 'development'}`);
             console.log(`📅 Started: ${new Date().toLocaleString('id-ID')}`);
             console.log('='.repeat(60));
@@ -49,12 +54,22 @@ const startServer = async () => {
                 console.log('   🔔 Firebase: Initialized');
                 
                 // Show key endpoints untuk development
+                const baseUrl = urlConfig.getApiBaseUrl();
                 console.log('\n🌟 Key Endpoints:');
-                console.log('   📱 Health Check: GET /')
-                console.log('   🔐 User Login: POST /api/auth/login');
-                console.log('   🗺️ Place Detail: GET /api/map/detail/:id');
-                console.log('   ⭐ Add Review: POST /api/map/review/add');
-                console.log('   📱 Scan QR: POST /api/map/scan/qr');
+                console.log(`   📱 Health Check: GET ${baseUrl}/`);
+                console.log(`   🔐 User Login: POST ${baseUrl}/api/auth/login`);
+                console.log(`   🗺️ Place Detail: GET ${baseUrl}/api/map/places/:id`);
+                console.log(`   ⭐ Add Review: POST ${baseUrl}/api/map/places/:id/reviews`);
+                console.log(`   📱 Scan QR: POST ${baseUrl}/api/map/scan/qr`);
+                
+                if (urlConfig.tunnelEnabled && urlConfig.externalUrl) {
+                    console.log('\n🚀 DevTunnel Ready for Android:');
+                    console.log(`   ✅ Tunnel Active: ${urlConfig.externalUrl}`);
+                    console.log('   📋 Copy this to your Android ApiConfig.kt:');
+                    console.log(`   const val BASE_URL = "${urlConfig.externalUrl}/api/"`);
+                    console.log('\n   🔗 Quick Test: Open in browser:');
+                    console.log(`   ${urlConfig.externalUrl}/`);
+                }
                 
             } catch (analyzerError) {
                 console.warn('⚠️ Endpoint analyzer error:', analyzerError.message);

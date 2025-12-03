@@ -14,7 +14,12 @@ const { reviewMapController } = require('../controllers/modul-map/reviewMapContr
 const { scanMapController } = require('../controllers/modul-map/scanMapController');
 
 // Import middleware
-const authenticateToken = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
+const { authenticateTokenFromDB } = require('../middleware/token');
+// Use authMiddleware as authenticateToken alias for consistency
+// Use authenticateTokenFromDB for enhanced security and auto-login compatibility
+const authenticateToken = authMiddleware;
+const authenticateTokenEnhanced = authenticateTokenFromDB;
 
 /**
  * ===========================================
@@ -24,13 +29,13 @@ const authenticateToken = require('../middleware/auth');
 
 // FUNGSIONAL 1: List lokasi budaya dengan status kunjungan
 // GET /api/map/places
-// Required auth - untuk cek status kunjungan user
-router.get('/places', authenticateToken, detailMapController.getPlacesWithVisitStatus);
+// Required enhanced auth - untuk cek status kunjungan user dengan auto-login support
+router.get('/places', authenticateTokenEnhanced, detailMapController.getPlacesWithVisitStatus);
 
 // FUNGSIONAL 2: Detail lokasi & validasi scan QR
 // GET /api/map/places/:id
-// Required auth - untuk validasi scan QR berdasarkan status kunjungan
-router.get('/places/:id', authenticateToken, detailMapController.getPlaceDetail);
+// Required enhanced auth - untuk validasi scan QR berdasarkan status kunjungan
+router.get('/places/:id', authenticateTokenEnhanced, detailMapController.getPlaceDetail);
 
 /**
  * ===========================================
@@ -40,22 +45,22 @@ router.get('/places/:id', authenticateToken, detailMapController.getPlaceDetail)
 
 // FUNGSIONAL 3: Mendapatkan semua review untuk tempat wisata tertentu
 // GET /api/map/places/:id/reviews
-// Required auth - untuk menampilkan review dengan like status user
-router.get('/places/:id/reviews', authenticateToken, reviewMapController.getPlaceReviews);
+// Required enhanced auth - untuk menampilkan review dengan like status user
+router.get('/places/:id/reviews', authenticateTokenEnhanced, reviewMapController.getPlaceReviews);
 
 // FUNGSIONAL 5: Mengelola ulasan (Tambah, Edit, Hapus)
 // POST /api/map/places/:id/reviews/add - Tambah review (EXPLICIT ACTION)
-router.post('/places/:id/reviews/add', authenticateToken, reviewMapController.addReview);
+router.post('/places/:id/reviews/add', authenticateTokenEnhanced, reviewMapController.addReview);
 
 // PUT /api/map/reviews/:id/edit - Edit review (EXPLICIT ACTION)
-router.put('/reviews/:id/edit', authenticateToken, reviewMapController.editReview);
+router.put('/reviews/:id/edit', authenticateTokenEnhanced, reviewMapController.editReview);
 
 // DELETE /api/map/reviews/:id/delete - Hapus review (EXPLICIT ACTION)
-router.delete('/reviews/:id/delete', authenticateToken, reviewMapController.deleteReview);
+router.delete('/reviews/:id/delete', authenticateTokenEnhanced, reviewMapController.deleteReview);
 
 // FUNGSIONAL 4: Toggle like pada review
 // POST /api/reviews/:id/toggle-like
-router.post('/reviews/:id/toggle-like', authenticateToken, reviewMapController.toggleReviewLike);
+router.post('/reviews/:id/toggle-like', authenticateTokenEnhanced, reviewMapController.toggleReviewLike);
 
 /**
  * ===========================================
@@ -65,19 +70,19 @@ router.post('/reviews/:id/toggle-like', authenticateToken, reviewMapController.t
 
 // FUNGSIONAL 6: Scan QR code dan catat kunjungan + FCM notification
 // POST /api/map/scan/qr
-// Required auth - hanya user login yang bisa scan QR
-router.post('/scan/qr', authenticateToken, scanMapController.scanQRCode);
+// Required enhanced auth - hanya user login dengan valid database token yang bisa scan QR
+router.post('/scan/qr', authenticateTokenEnhanced, scanMapController.scanQRCode);
 
 /**
  * ===========================================
  * ROUTE SUMMARY & DOCUMENTATION
  * ===========================================
  * 
- * AUTHENTICATED ROUTES (6 Fungsionalitas) - EXPLICIT ACTION NAMING:
- * - GET    /api/map/places                     - List tempat dengan status kunjungan
- * - GET    /api/map/places/:id                 - Detail tempat + validasi scan QR
- * - GET    /api/map/places/:id/reviews         - List review tempat (segregasi user & publik)
- * - POST   /api/map/places/:id/reviews/add     - Tambah review + FCM notification [NEW]
+ * AUTHENTICATED ROUTES (6 Fungsionalitas) - ENHANCED SECURITY:
+ * - GET    /api/map/places                     - List tempat dengan status kunjungan (Enhanced Auth)
+ * - GET    /api/map/places/:id                 - Detail tempat + validasi scan QR (Enhanced Auth)
+ * - GET    /api/map/places/:id/reviews         - List review tempat (Enhanced Auth) 
+ * - POST   /api/map/places/:id/reviews/add     - Tambah review + FCM notification (Enhanced Auth)
  * - PUT    /api/map/reviews/:id/edit           - Edit review user [NEW]
  * - DELETE /api/map/reviews/:id/delete         - Hapus review user [NEW]
  * - POST   /api/map/reviews/:id/toggle-like    - Toggle like review
