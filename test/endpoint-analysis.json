@@ -1,0 +1,443 @@
+{
+  "generated_at": "2025-12-02T17:55:52.418Z",
+  "total_endpoints": 35,
+  "by_method": {
+    "POST": 11,
+    "GET": 16,
+    "PUT": 6,
+    "DELETE": 2
+  },
+  "by_module": {
+    "auth": {
+      "count": 12,
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/api/auth/register"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/login"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/logout"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/profile"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/auth/fcm-token"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/auth/notification-preferences"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/notification-preferences"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/revoke-token"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/validate-token"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/auto-login"
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth/logout-db"
+        },
+        {
+          "method": "GET",
+          "path": "/api/auth/profile-db"
+        }
+      ]
+    },
+    "badge": {
+      "count": 2,
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/badge/"
+        },
+        {
+          "method": "GET",
+          "path": "/api/badge/user"
+        }
+      ]
+    },
+    "categoryroutes.js": {
+      "count": 2,
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/unknown/"
+        },
+        {
+          "method": "GET",
+          "path": "/api/unknown/:id/levels"
+        }
+      ]
+    },
+    "map": {
+      "count": 8,
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/map/places"
+        },
+        {
+          "method": "GET",
+          "path": "/api/map/places/:id"
+        },
+        {
+          "method": "GET",
+          "path": "/api/map/places/:id/reviews"
+        },
+        {
+          "method": "POST",
+          "path": "/api/map/places/:id/reviews/add"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/map/reviews/:id/edit"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/map/reviews/:id/delete"
+        },
+        {
+          "method": "POST",
+          "path": "/api/map/reviews/:id/toggle-like"
+        },
+        {
+          "method": "POST",
+          "path": "/api/map/scan/qr"
+        }
+      ]
+    },
+    "profile": {
+      "count": 4,
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/profile/profile"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/profile/profile"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/profile/profile/image"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/profile/password"
+        }
+      ]
+    },
+    "quiz": {
+      "count": 2,
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/api/quiz/start"
+        },
+        {
+          "method": "POST",
+          "path": "/api/quiz/submit"
+        }
+      ]
+    },
+    "video": {
+      "count": 5,
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/video/"
+        },
+        {
+          "method": "GET",
+          "path": "/api/video/favorites"
+        },
+        {
+          "method": "GET",
+          "path": "/api/video/:videoId"
+        },
+        {
+          "method": "POST",
+          "path": "/api/video/:videoId/favorite"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/video/:videoId/favorite"
+        }
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/register",
+      "fullPath": "/api/auth/register",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/login",
+      "fullPath": "/api/auth/login",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/logout",
+      "fullPath": "/api/auth/logout",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/profile",
+      "fullPath": "/api/auth/profile",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/fcm-token",
+      "fullPath": "/api/auth/fcm-token",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/notification-preferences",
+      "fullPath": "/api/auth/notification-preferences",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/notification-preferences",
+      "fullPath": "/api/auth/notification-preferences",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/revoke-token",
+      "fullPath": "/api/auth/revoke-token",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/validate-token",
+      "fullPath": "/api/auth/validate-token",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/auto-login",
+      "fullPath": "/api/auth/auto-login",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/logout-db",
+      "fullPath": "/api/auth/logout-db",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/profile-db",
+      "fullPath": "/api/auth/profile-db",
+      "module": "auth",
+      "file": "authRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api/badge/",
+      "module": "badge",
+      "file": "badgeRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/user",
+      "fullPath": "/api/badge/user",
+      "module": "badge",
+      "file": "badgeRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api/unknown/",
+      "module": "categoryroutes.js",
+      "file": "categoryroutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/:id/levels",
+      "fullPath": "/api/unknown/:id/levels",
+      "module": "categoryroutes.js",
+      "file": "categoryroutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/places",
+      "fullPath": "/api/map/places",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/places/:id",
+      "fullPath": "/api/map/places/:id",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/places/:id/reviews",
+      "fullPath": "/api/map/places/:id/reviews",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/places/:id/reviews/add",
+      "fullPath": "/api/map/places/:id/reviews/add",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/reviews/:id/edit",
+      "fullPath": "/api/map/reviews/:id/edit",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "DELETE",
+      "path": "/reviews/:id/delete",
+      "fullPath": "/api/map/reviews/:id/delete",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/reviews/:id/toggle-like",
+      "fullPath": "/api/map/reviews/:id/toggle-like",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/scan/qr",
+      "fullPath": "/api/map/scan/qr",
+      "module": "map",
+      "file": "mapRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/profile",
+      "fullPath": "/api/profile/profile",
+      "module": "profile",
+      "file": "profileRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/profile",
+      "fullPath": "/api/profile/profile",
+      "module": "profile",
+      "file": "profileRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/profile/image",
+      "fullPath": "/api/profile/profile/image",
+      "module": "profile",
+      "file": "profileRoutes.js"
+    },
+    {
+      "method": "PUT",
+      "path": "/password",
+      "fullPath": "/api/profile/password",
+      "module": "profile",
+      "file": "profileRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/start",
+      "fullPath": "/api/quiz/start",
+      "module": "quiz",
+      "file": "quizRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/submit",
+      "fullPath": "/api/quiz/submit",
+      "module": "quiz",
+      "file": "quizRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api/video/",
+      "module": "video",
+      "file": "videoRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/favorites",
+      "fullPath": "/api/video/favorites",
+      "module": "video",
+      "file": "videoRoutes.js"
+    },
+    {
+      "method": "GET",
+      "path": "/:videoId",
+      "fullPath": "/api/video/:videoId",
+      "module": "video",
+      "file": "videoRoutes.js"
+    },
+    {
+      "method": "POST",
+      "path": "/:videoId/favorite",
+      "fullPath": "/api/video/:videoId/favorite",
+      "module": "video",
+      "file": "videoRoutes.js"
+    },
+    {
+      "method": "DELETE",
+      "path": "/:videoId/favorite",
+      "fullPath": "/api/video/:videoId/favorite",
+      "module": "video",
+      "file": "videoRoutes.js"
+    }
+  ],
+  "formatted_list": [
+    "   🔐 Auth: 12 endpoints",
+    "   🏆 Badge: 2 endpoints",
+    "   📁 Categoryroutes.js: 2 endpoints",
+    "   🗺️ Map: 8 endpoints",
+    "   👤 Profile: 4 endpoints",
+    "   ❓ Quiz: 2 endpoints",
+    "   📹 Video: 5 endpoints"
+  ]
+}

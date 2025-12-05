@@ -8,7 +8,7 @@ const fs = require('fs');
 // Get Profile
 exports.getProfile = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
 
     const [users] = await db.query(
       `SELECT u.id, u.full_name, u.email, u.total_xp, u.user_image_url, u.status,
@@ -61,7 +61,7 @@ exports.getProfile = async (req, res, next) => {
 // Update Profile
 exports.updateProfile = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { full_name, email } = req.body;
 
     // Validation
@@ -104,7 +104,7 @@ exports.updateProfile = async (req, res, next) => {
 // Update Profile Image
 exports.updateProfileImage = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
 
     if (!req.file) {
       return res.status(400).json({
@@ -153,7 +153,7 @@ exports.updateProfileImage = async (req, res, next) => {
 // Change Password
 exports.changePassword = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { current_password, new_password } = req.body;
 
     // Validation

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 27, 2025 at 05:06 PM
+-- Generation Time: Nov 30, 2025 at 07:31 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -121,6 +121,16 @@ CREATE TABLE `qr_code` (
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `qr_code`
+--
+
+INSERT INTO `qr_code` (`qr_code_id`, `tourist_place_id`, `code_value`, `is_active`, `created_at`, `updated_at`) VALUES
+('QR001', 'TP001', 'SAKO-TP001-BKT', 1, '2025-11-29 15:16:28', '2025-11-29 15:16:28'),
+('QR002', 'TP002', 'SAKO-TP002-SWL', 1, '2025-11-29 15:16:28', '2025-11-29 15:16:28'),
+('QR003', 'TP003', 'SAKO-TP003-PDG', 1, '2025-11-29 15:16:28', '2025-11-29 15:16:28'),
+('QR004', 'TP004', 'SAKO-TP004-PSS', 1, '2025-11-29 15:16:28', '2025-11-29 15:16:28');
+
 -- --------------------------------------------------------
 
 --
@@ -219,12 +229,30 @@ CREATE TABLE `review` (
 -- Triggers `review`
 --
 DELIMITER $$
+CREATE TRIGGER `after_review_delete_recalc_rating` AFTER DELETE ON `review` FOR EACH ROW BEGIN
+    UPDATE `tourist_place`
+    SET average_rating = (SELECT IFNULL(AVG(rating), 0) FROM review WHERE tourist_place_id = OLD.tourist_place_id)
+    WHERE tourist_place_id = OLD.tourist_place_id;
+END
+$$
+DELIMITER ;
+DELIMITER $$
 CREATE TRIGGER `after_review_insert_update_rating` AFTER INSERT ON `review` FOR EACH ROW BEGIN
     -- Update hanya rata-rata rating di tabel tourist_place
     UPDATE `tourist_place`
     SET 
         average_rating = (SELECT IFNULL(AVG(rating), 0) FROM review WHERE tourist_place_id = NEW.tourist_place_id)
     WHERE id = NEW.tourist_place_id;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `after_review_update_recalc_rating` AFTER UPDATE ON `review` FOR EACH ROW BEGIN
+    IF OLD.rating <> NEW.rating THEN
+        UPDATE `tourist_place`
+        SET average_rating = (SELECT IFNULL(AVG(rating), 0) FROM review WHERE tourist_place_id = NEW.tourist_place_id)
+        WHERE tourist_place_id = NEW.tourist_place_id;
+    END IF;
 END
 $$
 DELIMITER ;
@@ -245,6 +273,12 @@ CREATE TABLE `review_like` (
 --
 -- Triggers `review_like`
 --
+DELIMITER $$
+CREATE TRIGGER `after_review_like_delete` AFTER DELETE ON `review_like` FOR EACH ROW BEGIN
+    UPDATE `review` SET total_likes = total_likes - 1 WHERE review_id = OLD.review_id;
+END
+$$
+DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `after_review_like_insert` AFTER INSERT ON `review_like` FOR EACH ROW UPDATE review
 SET total_likes = total_likes + 1
@@ -270,6 +304,28 @@ CREATE TABLE `tourist_place` (
   `average_rating` decimal(3,1) DEFAULT 0.0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `tourist_place`
+--
+
+INSERT INTO `tourist_place` (`tourist_place_id`, `name`, `description`, `address`, `image_url`, `is_active`, `created_at`, `updated_at`, `average_rating`) VALUES
+('TP001', 'Jam Gadang', 'Jam Gadang adalah ikon pariwisata Kota Bukittinggi yang menjulang setinggi 26 meter di jantung kota. Menara jam ini memiliki keunikan pada angka empat romawi yang ditulis IIII dan atap bagonjong yang mencerminkan arsitektur Minangkabau. Dibangun pada masa kolonial Belanda, tempat ini menawarkan pemandangan kota yang indah dan udara sejuk khas perbukitan.', 'Jl. Raya Bukittinggi - Payakumbuh, Benteng Ps. Atas, Bukittinggi', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP001-jam-gadang.jpg', 1, '2025-11-29 15:16:28', '2025-11-30 03:33:33', 0.0),
+('TP002', 'Museum Gudang Ransum', 'Terletak di Sawahlunto, museum ini merupakan bekas dapur umum yang dibangun pada tahun 1918 untuk pekerja tambang batubara. Koleksinya meliputi periuk dan kuali raksasa yang menjadi saksi bisu sejarah pertambangan \"Orang Rantai\" di era kolonial. Wisatawan dapat mempelajari sejarah kuliner massal dan teknologi uap yang digunakan pada masa lampau.', 'Jl. Abdul Rahman Hakim, Air Dingin, Sawahlunto', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP002-museum-gudang-ransum.jpg', 1, '2025-11-29 15:16:28', '2025-11-30 03:46:57', 0.0),
+('TP003', 'Pantai Air Manis', 'Pantai ini terkenal di seluruh nusantara sebagai lokasi legenda Malin Kundang si anak durhaka. Pengunjung dapat melihat formasi batu yang menyerupai pecahan kapal dan sosok manusia yang sedang bersujud memohon ampun di tepi pantai. Selain wisata sejarah, pantai ini menawarkan pasir cokelat yang luas dan pemandangan Gunung Padang yang memukau.', 'Jl. Malin Kundang, Air Manis, Padang Selatan, Kota Padang', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP003-pantai-air-manis.jpg', 1, '2025-11-29 15:16:28', '2025-11-30 03:47:27', 0.0),
+('TP004', 'Pantai Carocok', 'Primadona wisata di Painan, Pesisir Selatan ini menawarkan keindahan air laut yang jernih dan jembatan apung yang ikonik. Terhubung dengan Pulau Batu Kereta, kawasan ini menjadi spot favorit untuk menikmati matahari terbenam dan bermain wahana air. Suasana pantai yang tenang menjadikannya lokasi yang sempurna untuk rekreasi keluarga.', 'Jl. Pantai Carocok, Painan, Pesisir Selatan', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP004-pantai-carocok.jpeg', 1, '2025-11-29 15:16:28', '2025-11-30 03:47:50', 0.0);
+
+--
+-- Triggers `tourist_place`
+--
+DELIMITER $$
+CREATE TRIGGER `after_place_create_init_visits` AFTER INSERT ON `tourist_place` FOR EACH ROW BEGIN
+    INSERT INTO `user_visit` (user_visit_id, user_id, tourist_place_id, status)
+    SELECT UUID(), users_id, NEW.tourist_place_id, 'not_visited'
+    FROM `users`;
+END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -287,8 +343,22 @@ CREATE TABLE `users` (
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `token` varchar(255) DEFAULT NULL,
+  `fcm_token` text DEFAULT NULL,
+  `notification_preferences` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`notification_preferences`)),
   `token_validity` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Triggers `users`
+--
+DELIMITER $$
+CREATE TRIGGER `after_user_register_init_visits` AFTER INSERT ON `users` FOR EACH ROW BEGIN
+    INSERT INTO `user_visit` (user_visit_id, user_id, tourist_place_id, status)
+    SELECT UUID(), NEW.users_id, tourist_place_id, 'not_visited'
+    FROM `tourist_place`;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -495,7 +565,8 @@ ALTER TABLE `tourist_place`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`users_id`),
   ADD UNIQUE KEY `email` (`email`),
-  ADD UNIQUE KEY `token` (`token`);
+  ADD UNIQUE KEY `token` (`token`),
+  ADD KEY `idx_users_status` (`status`);
 
 --
 -- Indexes for table `user_badge`

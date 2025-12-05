@@ -5,7 +5,7 @@ const db = require('../config/database');
 // Get All Badges
 exports.getAllBadges = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
 
     const [badges] = await db.query(
       `SELECT 
@@ -36,7 +36,7 @@ exports.getAllBadges = async (req, res, next) => {
 // Get User Badges
 exports.getUserBadges = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
 
     const [badges] = await db.query(
       `SELECT 

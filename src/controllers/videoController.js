@@ -6,7 +6,7 @@ const db = require('../config/database');
 // Get Videos with Pagination and Filters
 exports.getVideos = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { search, kategori, page = 1, limit = 20 } = req.query;
     
     const offset = (page - 1) * limit;
@@ -63,7 +63,7 @@ exports.getVideos = async (req, res, next) => {
 // Get Video Detail
 exports.getVideoDetail = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { videoId } = req.params;
 
     const [videos] = await db.query(
@@ -96,7 +96,7 @@ exports.getVideoDetail = async (req, res, next) => {
 // Add Favorite Video
 exports.addFavoriteVideo = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { videoId } = req.params;
 
     // Check if video exists
@@ -144,7 +144,7 @@ exports.addFavoriteVideo = async (req, res, next) => {
 // Remove Favorite Video
 exports.removeFavoriteVideo = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
     const { videoId } = req.params;
 
     const result = await db.query(
@@ -172,7 +172,7 @@ exports.removeFavoriteVideo = async (req, res, next) => {
 // Get Favorite Videos
 exports.getFavoriteVideos = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.users_id;
 
     const [videos] = await db.query(
       `SELECT v.*, fv.tanggal_ditambah, 1 as is_favorited
