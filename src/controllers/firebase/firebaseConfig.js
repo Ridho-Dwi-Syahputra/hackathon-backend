@@ -14,6 +14,10 @@ const missingVars = requiredVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
     console.error('❌ Konfigurasi Firebase tidak lengkap di file .env');
     console.error('🔧 Variable yang hilang:', missingVars.join(', '));
+    console.error('📝 Pastikan file .env berisi:');
+    console.error('   FIREBASE_PROJECT_ID=your-project-id');
+    console.error('   FIREBASE_CLIENT_EMAIL=your-service-account-email');  
+    console.error('   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n..."');
     
     writeLog('firebase/connection', 'ERROR', 'Konfigurasi Firebase tidak lengkap', {
         missing_vars: missingVars,

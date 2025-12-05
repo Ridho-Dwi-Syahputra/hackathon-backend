@@ -121,6 +121,22 @@ exports.register = async (req, res, next) => {
         // Generate custom user ID
         const users_id = await generateCustomId(require('../config/database'), 'U', 'users', 'users_id', 3);
         
+        // Validasi apakah ID yang di-generate sudah unik
+        const existingUserWithId = await AuthModel.findUserById(users_id);
+        if (existingUserWithId) {
+            // Jika masih duplikat, coba generate ulang dengan timestamp
+            const timestamp = Date.now().toString().slice(-3);
+            const fallbackId = `U${timestamp.padStart(3, '0')}`;
+            
+            await logActivity('user_id_collision_detected', 'warning', {
+                original_id: users_id,
+                fallback_id: fallbackId,
+                for_email: email
+            }, 'modul-autentikasi');
+            
+            users_id = fallbackId;
+        }
+        
         await logActivity('user_id_generated', 'success', {
             generated_id: users_id,
             for_email: email
@@ -288,20 +304,30 @@ exports.login = async (req, res, next) => {
         }
 
         // Update FCM token jika disediakan
-        if (fcm_token) {
+        let updatedFcmToken = user.fcm_token; // Keep existing token as fallback
+        
+        if (fcm_token && fcm_token.trim() !== '') {
             try {
+                console.log(`🔔 Updating FCM token for user ${user.users_id}`);
                 await AuthModel.updateFcmToken(user.users_id, fcm_token);
+                updatedFcmToken = fcm_token; // Use new token
                 
                 await logActivity('fcm_token_updated', 'success', {
                     users_id: user.users_id,
-                    email: user.email
+                    email: user.email,
+                    new_token_length: fcm_token.length
                 }, 'modul-autentikasi');
             } catch (fcmError) {
+                console.error('❌ FCM token update failed:', fcmError.message);
                 await logError('fcm_update_error', fcmError, {
                     users_id: user.users_id,
-                    email: user.email
+                    email: user.email,
+                    token_length: fcm_token ? fcm_token.length : 0
                 }, 'modul-autentikasi');
+                // Don't fail login if FCM update fails, use existing token
             }
+        } else {
+            console.log(`📝 No FCM token provided for user ${user.users_id}`);
         }
 
         // Update last login
@@ -341,7 +367,7 @@ exports.login = async (req, res, next) => {
                 total_xp: user.total_xp || 0,
                 status: user.status,
                 user_image_url: user.user_image_url,
-                fcm_token: fcm_token || user.fcm_token,
+                fcm_token: updatedFcmToken,
                 notification_preferences: notificationPreferences
             }
         }, 'Login berhasil');

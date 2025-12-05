@@ -31,7 +31,7 @@ const startServer = async () => {
         }
         
         // Start server
-        const server = app.listen(PORT, async () => {
+        const server = app.listen(PORT, '0.0.0.0', async () => {
             console.log('\n' + '='.repeat(60));
             console.log('🎉 SERVER SAKO BERHASIL BERJALAN!');
             console.log('='.repeat(60));
