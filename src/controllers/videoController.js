@@ -5,190 +5,188 @@ const db = require('../config/database');
 
 // Get Videos with Pagination and Filters
 exports.getVideos = async (req, res, next) => {
-  try {
-    const userId = req.user.users_id;
-    const { search, kategori, page = 1, limit = 20 } = req.query;
-    
-    const offset = (page - 1) * limit;
-    let whereClause = 'v.is_active = 1';
-    const params = [];
+    try {
+        const userId = req.user.users_id;
+        const { search, kategori, page = 1, limit = 20 } = req.query;
 
-    if (search) {
-      whereClause += ' AND (v.judul LIKE ? OR v.deskripsi LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
+        const offset = (page - 1) * limit;
+        let whereClause = 'v.is_active = 1';
+        const params = [];
 
-    if (kategori) {
-      whereClause += ' AND v.kategori = ?';
-      params.push(kategori);
-    }
-
-    // Get videos
-    const [videos] = await db.query(
-      `SELECT 
-         v.*,
-         CASE WHEN fv.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
-       FROM video v
-       LEFT JOIN favorit_video fv ON v.id = fv.id_video AND fv.id_user = ?
-       WHERE ${whereClause}
-       ORDER BY v.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [userId, ...params, parseInt(limit), parseInt(offset)]
-    );
-
-    // Get total count
-    const [countResult] = await db.query(
-      `SELECT COUNT(*) as total FROM video v WHERE ${whereClause}`,
-      params
-    );
-
-    res.json({
-      success: true,
-      data: {
-        videos,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: countResult[0].total,
-          total_pages: Math.ceil(countResult[0].total / limit)
+        if (search) {
+            whereClause += ' AND (v.judul LIKE ? OR v.deskripsi LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`);
         }
-      }
-    });
 
-  } catch (error) {
-    next(error);
-  }
+        if (kategori) {
+            whereClause += ' AND v.kategori = ?';
+            params.push(kategori);
+        }
+
+        // Get videos - conditional favorit check based on userId
+        const query = userId
+            ? `SELECT 
+           v.*,
+           CASE WHEN fv.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
+         FROM video v
+         LEFT JOIN favorit_video fv ON v.id = fv.id_video AND fv.id_user = ?
+         WHERE ${whereClause}
+         ORDER BY v.created_at DESC
+         LIMIT ? OFFSET ?`
+            : `SELECT 
+           v.*,
+           0 as is_favorited
+         FROM video v
+         WHERE ${whereClause}
+         ORDER BY v.created_at DESC
+         LIMIT ? OFFSET ?`;
+
+        const queryParams = userId ? [userId, ...params, parseInt(limit), parseInt(offset)] : [...params, parseInt(limit), parseInt(offset)];
+
+        console.log('🔍 Query:', query);
+        console.log('🔍 Params:', queryParams);
+
+        const videos = await db.query(query, queryParams);
+
+        console.log('🔍 Videos array length:', videos.length);
+        console.log('🔍 First video:', videos[0]);
+
+        // Get total count
+        const countResult = await db.query(`SELECT COUNT(*) as total FROM video v WHERE ${whereClause}`, params);
+        const total = countResult[0]?.total || 0;
+
+        console.log(`📹 Video Query Result: ${videos.length} videos found, Total in DB: ${total}`);
+
+        res.json({
+            success: true,
+            data: {
+                videos,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: total,
+                    total_pages: Math.ceil(total / limit),
+                },
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
 };
 
 // Get Video Detail
 exports.getVideoDetail = async (req, res, next) => {
-  try {
-    const userId = req.user.users_id;
-    const { videoId } = req.params;
+    try {
+        const userId = req.user.users_id;
+        const { videoId } = req.params;
 
-    const [videos] = await db.query(
-      `SELECT 
+        const videos = await db.query(
+            `SELECT 
          v.*,
          CASE WHEN fv.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
        FROM video v
        LEFT JOIN favorit_video fv ON v.id = fv.id_video AND fv.id_user = ?
        WHERE v.id = ? AND v.is_active = 1`,
-      [userId, videoId]
-    );
+            [userId, videoId]
+        );
 
-    if (videos.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Video tidak ditemukan'
-      });
+        if (videos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Video tidak ditemukan',
+            });
+        }
+
+        res.json({
+            success: true,
+            data: videos[0],
+        });
+    } catch (error) {
+        next(error);
     }
-
-    res.json({
-      success: true,
-      data: videos[0]
-    });
-
-  } catch (error) {
-    next(error);
-  }
 };
 
 // Add Favorite Video
 exports.addFavoriteVideo = async (req, res, next) => {
-  try {
-    const userId = req.user.users_id;
-    const { videoId } = req.params;
+    try {
+        const userId = req.user.users_id;
+        const { videoId } = req.params;
 
-    // Check if video exists
-    const [videos] = await db.query(
-      'SELECT id FROM video WHERE id = ? AND is_active = 1',
-      [videoId]
-    );
+        // Check if video exists
+        const videos = await db.query('SELECT id FROM video WHERE id = ? AND is_active = 1', [videoId]);
 
-    if (videos.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Video tidak ditemukan'
-      });
+        if (videos.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Video tidak ditemukan',
+            });
+        }
+
+        // Check if already favorited
+        const existing = await db.query('SELECT id FROM favorit_video WHERE id_user = ? AND id_video = ?', [userId, videoId]);
+
+        if (existing.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Video sudah ada di favorit',
+            });
+        }
+
+        // Add to favorites
+        await db.query('INSERT INTO favorit_video (id, id_user, id_video, tanggal_ditambah) VALUES (?, ?, ?, NOW())', [uuidv4(), userId, videoId]);
+
+        res.json({
+            success: true,
+            message: 'Video berhasil ditambahkan ke favorit',
+        });
+    } catch (error) {
+        next(error);
     }
-
-    // Check if already favorited
-    const [existing] = await db.query(
-      'SELECT id FROM favorit_video WHERE id_user = ? AND id_video = ?',
-      [userId, videoId]
-    );
-
-    if (existing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Video sudah ada di favorit'
-      });
-    }
-
-    // Add to favorites
-    await db.query(
-      'INSERT INTO favorit_video (id, id_user, id_video, tanggal_ditambah) VALUES (?, ?, ?, NOW())',
-      [uuidv4(), userId, videoId]
-    );
-
-    res.json({
-      success: true,
-      message: 'Video berhasil ditambahkan ke favorit'
-    });
-
-  } catch (error) {
-    next(error);
-  }
 };
 
 // Remove Favorite Video
 exports.removeFavoriteVideo = async (req, res, next) => {
-  try {
-    const userId = req.user.users_id;
-    const { videoId } = req.params;
+    try {
+        const userId = req.user.users_id;
+        const { videoId } = req.params;
 
-    const result = await db.query(
-      'DELETE FROM favorit_video WHERE id_user = ? AND id_video = ?',
-      [userId, videoId]
-    );
+        const result = await db.query('DELETE FROM favorit_video WHERE id_user = ? AND id_video = ?', [userId, videoId]);
 
-    if (result[0].affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Video tidak ditemukan di favorit'
-      });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Video tidak ditemukan di favorit',
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Video berhasil dihapus dari favorit',
+        });
+    } catch (error) {
+        next(error);
     }
-
-    res.json({
-      success: true,
-      message: 'Video berhasil dihapus dari favorit'
-    });
-
-  } catch (error) {
-    next(error);
-  }
 };
 
 // Get Favorite Videos
 exports.getFavoriteVideos = async (req, res, next) => {
-  try {
-    const userId = req.user.users_id;
+    try {
+        const userId = req.user.users_id;
 
-    const [videos] = await db.query(
-      `SELECT v.*, fv.tanggal_ditambah, 1 as is_favorited
+        const videos = await db.query(
+            `SELECT v.*, fv.tanggal_ditambah, 1 as is_favorited
        FROM favorit_video fv
        JOIN video v ON fv.id_video = v.id
        WHERE fv.id_user = ? AND v.is_active = 1
        ORDER BY fv.tanggal_ditambah DESC`,
-      [userId]
-    );
+            [userId]
+        );
 
-    res.json({
-      success: true,
-      data: videos
-    });
-
-  } catch (error) {
-    next(error);
-  }
+        res.json({
+            success: true,
+            data: { videos },
+        });
+    } catch (error) {
+        next(error);
+    }
 };

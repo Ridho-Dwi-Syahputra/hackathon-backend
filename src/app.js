@@ -64,7 +64,7 @@ try {
     const authMiddleware = require('./middleware/auth');
 
     // Import routes tambahan jika ada
-    let badgeRoutes, profileRoutes, videoRoutes;
+    let badgeRoutes, profileRoutes, videoRoutes, videoCollectionRoutes;
 
     try {
         badgeRoutes = require('./routes/badgeRoutes');
@@ -84,6 +84,12 @@ try {
         console.warn('⚠️ videoRoutes not found or has error:', e.message);
     }
 
+    try {
+        videoCollectionRoutes = require('./routes/videoCollectionRoutes');
+    } catch (e) {
+        console.warn('⚠️ videoCollectionRoutes not found or has error:', e.message);
+    }
+
     // Mount routes
     app.use('/api/auth', authRoutes);
     app.use('/api/quiz', quizRoutes);
@@ -96,6 +102,7 @@ try {
     // Mount routes tambahan jika berhasil diimport
     if (badgeRoutes) app.use('/api/badge', badgeRoutes);
     if (profileRoutes) app.use('/api/profile', profileRoutes);
+    if (videoCollectionRoutes) app.use('/api/video-collections', videoCollectionRoutes);
     if (videoRoutes) app.use('/api/videos', videoRoutes);
 } catch (routeError) {
     console.warn('⚠️ Warning: Some routes failed to load:', routeError.message);
