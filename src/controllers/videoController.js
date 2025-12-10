@@ -113,7 +113,7 @@ exports.addFavoriteVideo = async (req, res, next) => {
         const { videoId } = req.params;
 
         // Check if video exists
-        const videos = await db.query('SELECT id FROM video WHERE id = ? AND is_active = 1', [videoId]);
+        const videos = await db.query('SELECT id, judul FROM video WHERE id = ? AND is_active = 1', [videoId]);
 
         if (videos.length === 0) {
             return res.status(404).json({
@@ -135,10 +135,55 @@ exports.addFavoriteVideo = async (req, res, next) => {
         // Add to favorites
         await db.query('INSERT INTO favorit_video (id, id_user, id_video, tanggal_ditambah) VALUES (?, ?, ?, NOW())', [uuidv4(), userId, videoId]);
 
+        // Send success response first
         res.json({
             success: true,
             message: 'Video berhasil ditambahkan ke favorit',
         });
+
+        // Send push notification (non-blocking)
+        try {
+            const videoJudul = videos[0].judul;
+            const AuthModel = require('../models/authModel');
+            const user = await AuthModel.findUserById(userId);
+
+            console.log('🔍 Debug FCM - User found:', user ? 'Yes' : 'No');
+            console.log('🔍 Debug FCM - FCM Token exists:', user?.fcm_token ? 'Yes' : 'No');
+            console.log('🔍 Debug FCM - FCM Token preview:', user?.fcm_token?.substring(0, 20));
+
+            if (user && user.fcm_token) {
+                const { sendNotification } = require('./firebase/firebaseConfig');
+
+                console.log('🚀 Attempting to send notification...');
+
+                await sendNotification(
+                    user.fcm_token,
+                    '🎉 Video Ditambahkan ke Favorit!',
+                    `Video "${videoJudul}" berhasil ditambahkan ke koleksi favorit Anda`,
+                    {
+                        type: 'video_favorited',
+                        video_id: videoId,
+                        video_title: videoJudul,
+                        action: 'open_favorites',
+                        user_id: userId,
+                        user_name: user.full_name || user.email,
+                    },
+                    {
+                        channelId: 'sako_favorites',
+                        priority: 'high',
+                        sound: 'default',
+                    }
+                );
+
+                console.log(`✅ Push notification sent: Video "${videoJudul}" favorited by ${user.email}`);
+            } else {
+                console.log('⚠️ No FCM token found for user, skipping notification');
+            }
+        } catch (notifError) {
+            // Log error but don't fail the request
+            console.error('❌ Failed to send notification:', notifError.message);
+            console.error('❌ Error stack:', notifError.stack);
+        }
     } catch (error) {
         next(error);
     }
