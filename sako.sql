@@ -242,7 +242,7 @@ CREATE TRIGGER `after_review_insert_update_rating` AFTER INSERT ON `review` FOR 
     UPDATE `tourist_place`
     SET 
         average_rating = (SELECT IFNULL(AVG(rating), 0) FROM review WHERE tourist_place_id = NEW.tourist_place_id)
-    WHERE id = NEW.tourist_place_id;
+    WHERE tourist_place_id = NEW.tourist_place_id;
 END
 $$
 DELIMITER ;

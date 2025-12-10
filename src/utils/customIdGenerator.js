@@ -27,37 +27,36 @@ const generateCustomId = async (db, prefix, tableName, idField, padding = 3) => 
             throw new Error('Missing required parameters: db, prefix, tableName, and idField are required');
         }
 
+        // Query untuk mendapatkan ID terakhir dengan prefix yang sama (sekali saja)
+        const query = `
+            SELECT ${idField} FROM ${tableName} 
+            WHERE ${idField} LIKE '${prefix}%' 
+            ORDER BY CAST(SUBSTRING(${idField}, ${prefix.length + 1}) AS UNSIGNED) DESC 
+            LIMIT 1
+        `;
+        const result = await db.query(query);
+        
+        // Cek apakah ada data yang ditemukan
+        const lastRecord = result[0] && result[0].length > 0 ? result[0][0] : null;
+
+        let nextNumber = 1;
+        
+        if (lastRecord && lastRecord[idField]) {
+            const lastId = lastRecord[idField]; // Contoh: "RV005"
+            
+            // Extract number part dari ID
+            const numberPart = lastId.replace(prefix, ""); // "005"
+            const lastNumber = parseInt(numberPart, 10); // 5
+            
+            if (!isNaN(lastNumber) && lastNumber >= 0) {
+                nextNumber = lastNumber + 1; // 6
+            }
+        }
+
         let attempts = 0;
         const maxAttempts = 10;
         
         while (attempts < maxAttempts) {
-            // Query untuk mendapatkan ID terakhir dengan prefix yang sama
-            // Gunakan CAST untuk memastikan ordering numerik yang benar
-            const query = `
-                SELECT ${idField} FROM ${tableName} 
-                WHERE ${idField} LIKE '${prefix}%' 
-                ORDER BY CAST(SUBSTRING(${idField}, ${prefix.length + 1}) AS UNSIGNED) DESC 
-                LIMIT 1
-            `;
-            const result = await db.query(query);
-            
-            // Cek apakah ada data yang ditemukan
-            const lastRecord = result[0] && result[0].length > 0 ? result[0][0] : null;
-
-            let nextNumber = 1;
-            
-            if (lastRecord && lastRecord[idField]) {
-                const lastId = lastRecord[idField]; // Contoh: "U005"
-                
-                // Extract number part dari ID
-                const numberPart = lastId.replace(prefix, ""); // "005"
-                const lastNumber = parseInt(numberPart, 10); // 5
-                
-                if (!isNaN(lastNumber) && lastNumber >= 0) {
-                    nextNumber = lastNumber + 1; // 6
-                }
-            }
-
             // Format angka dengan padding (misal: 6 -> "006")
             const paddedNumber = String(nextNumber).padStart(padding, '0');
             const generatedId = `${prefix}${paddedNumber}`;
@@ -72,8 +71,9 @@ const generateCustomId = async (db, prefix, tableName, idField, padding = 3) => 
                 return generatedId;
             }
             
-            // ID sudah ada, coba lagi
+            // ID sudah ada, increment dan coba lagi
             console.warn(`⚠️ ID ${generatedId} sudah ada, mencoba generate ulang... (attempt: ${attempts + 1})`);
+            nextNumber++; // INCREMENT DI SINI!
             attempts++;
         }
 

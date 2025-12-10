@@ -40,7 +40,11 @@ class ReviewMapModel {
                 `;
                 
                 const userReviewResult = await db.query(userReviewQuery, [userId, touristPlaceId]);
-                userReview = userReviewResult.length > 0 ? userReviewResult[0] : null;
+                if (userReviewResult.length > 0) {
+                    userReview = userReviewResult[0];
+                    // Convert is_liked_by_me dari integer ke boolean
+                    userReview.is_liked_by_me = Boolean(userReview.is_liked_by_me);
+                }
             }
 
             // Get other users' reviews
@@ -68,6 +72,12 @@ class ReviewMapModel {
                 userId || '', touristPlaceId, userId || '', limit, offset
             ]);
 
+            // Convert is_liked_by_me untuk other reviews
+            const otherReviewsWithBoolean = otherReviewsResult.map(review => ({
+                ...review,
+                is_liked_by_me: Boolean(review.is_liked_by_me)
+            }));
+
             // Get total count
             const countQuery = `
                 SELECT COUNT(*) as total 
@@ -79,7 +89,7 @@ class ReviewMapModel {
 
             return {
                 user_review: userReview,
-                other_reviews: otherReviewsResult,
+                other_reviews: otherReviewsWithBoolean,
                 pagination: {
                     page: page,
                     limit: limit,
@@ -189,6 +199,8 @@ class ReviewMapModel {
      * @returns {Promise<Object>} Updated review
      */
     static async updateReview(userId, reviewId, rating, reviewText) {
+        const connection = await db.pool.getConnection();
+        
         try {
             // Check if review belongs to user
             const checkQuery = `
@@ -196,16 +208,14 @@ class ReviewMapModel {
                 FROM review 
                 WHERE review_id = ? AND user_id = ?
             `;
-            const checkResult = await db.query(checkQuery, [reviewId, userId]);
+            const [checkResult] = await connection.execute(checkQuery, [reviewId, userId]);
             
             if (checkResult.length === 0) {
                 throw new Error('Review tidak ditemukan atau Anda tidak memiliki akses');
             }
 
-            const touristPlaceId = checkResult[0].tourist_place_id;
-
             // Start transaction
-            await db.query('START TRANSACTION');
+            await connection.beginTransaction();
 
             // Update review
             const updateQuery = `
@@ -213,12 +223,12 @@ class ReviewMapModel {
                 SET rating = ?, review_text = ?, updated_at = NOW() 
                 WHERE review_id = ? AND user_id = ?
             `;
-            await db.query(updateQuery, [rating, reviewText, reviewId, userId]);
+            await connection.execute(updateQuery, [rating, reviewText, reviewId, userId]);
 
-            // Recalculate average rating for the place
-            await this.updateTouristPlaceRating(touristPlaceId);
+            // CATATAN: Trigger after_review_update_recalc_rating akan auto-update average_rating
+            // Tidak perlu manual call updateTouristPlaceRating()
 
-            await db.query('COMMIT');
+            await connection.commit();
 
             // Return updated review
             const getUpdatedQuery = `
@@ -231,13 +241,15 @@ class ReviewMapModel {
                 FROM review r
                 WHERE r.review_id = ?
             `;
-            const updatedResult = await db.query(getUpdatedQuery, [reviewId]);
+            const [updatedResult] = await connection.execute(getUpdatedQuery, [reviewId]);
             
             return updatedResult[0];
         } catch (error) {
-            await db.query('ROLLBACK');
+            await connection.rollback();
             console.error('Error updating review:', error);
             throw error;
+        } finally {
+            connection.release();
         }
     }
 
@@ -247,6 +259,8 @@ class ReviewMapModel {
      * @param {string} reviewId - Review ID
      */
     static async deleteReview(userId, reviewId) {
+        const connection = await db.pool.getConnection();
+        
         try {
             // Check if review belongs to user
             const checkQuery = `
@@ -254,33 +268,33 @@ class ReviewMapModel {
                 FROM review 
                 WHERE review_id = ? AND user_id = ?
             `;
-            const checkResult = await db.query(checkQuery, [reviewId, userId]);
+            const [checkResult] = await connection.execute(checkQuery, [reviewId, userId]);
             
             if (checkResult.length === 0) {
                 throw new Error('Review tidak ditemukan atau Anda tidak memiliki akses');
             }
 
-            const touristPlaceId = checkResult[0].tourist_place_id;
-
             // Start transaction
-            await db.query('START TRANSACTION');
+            await connection.beginTransaction();
 
             // Delete review likes first
             const deleteLikesQuery = `DELETE FROM review_like WHERE review_id = ?`;
-            await db.query(deleteLikesQuery, [reviewId]);
+            await connection.execute(deleteLikesQuery, [reviewId]);
 
             // Delete review
             const deleteQuery = `DELETE FROM review WHERE review_id = ? AND user_id = ?`;
-            await db.query(deleteQuery, [reviewId, userId]);
+            await connection.execute(deleteQuery, [reviewId, userId]);
 
-            // Recalculate average rating for the place
-            await this.updateTouristPlaceRating(touristPlaceId);
+            // CATATAN: Trigger after_review_delete_recalc_rating akan auto-update average_rating
+            // Tidak perlu manual call updateTouristPlaceRating()
 
-            await db.query('COMMIT');
+            await connection.commit();
         } catch (error) {
-            await db.query('ROLLBACK');
+            await connection.rollback();
             console.error('Error deleting review:', error);
             throw error;
+        } finally {
+            connection.release();
         }
     }
 
@@ -295,9 +309,11 @@ class ReviewMapModel {
      * @returns {Promise<Object>} Created review data
      */
     static async createReview(reviewData) {
+        const connection = await db.pool.getConnection();
+        
         try {
             // Start transaction
-            await db.query('START TRANSACTION');
+            await connection.beginTransaction();
 
             const { review_id, user_id, tourist_place_id, rating, review_text } = reviewData;
 
@@ -315,7 +331,7 @@ class ReviewMapModel {
                 ) VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
             `;
 
-            await db.query(insertQuery, [
+            await connection.execute(insertQuery, [
                 review_id, 
                 user_id, 
                 tourist_place_id, 
@@ -323,10 +339,10 @@ class ReviewMapModel {
                 review_text
             ]);
 
-            // Update tourist place average rating
-            await this.updateTouristPlaceRating(tourist_place_id);
+            // CATATAN: Trigger after_review_insert_update_rating akan auto-update average_rating
+            // Tidak perlu manual call updateTouristPlaceRating()
 
-            await db.query('COMMIT');
+            await connection.commit();
 
             // Get created review with place info
             const getCreatedQuery = `
@@ -353,12 +369,15 @@ class ReviewMapModel {
                 WHERE r.review_id = ?
             `;
             
-            const result = await db.query(getCreatedQuery, [review_id]);
+            const [result] = await connection.execute(getCreatedQuery, [review_id]);
+            
             return result[0];
         } catch (error) {
-            await db.query('ROLLBACK');
+            await connection.rollback();
             console.error('Error creating review:', error);
             throw error;
+        } finally {
+            connection.release();
         }
     }
 

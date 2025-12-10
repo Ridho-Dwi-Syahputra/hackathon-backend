@@ -175,6 +175,21 @@ exports.register = async (req, res, next) => {
         
         const createdUser = await AuthModel.createUser(userData);
 
+        // Generate JWT token untuk auto-login setelah register
+        const accessToken = jwt.sign(
+            { users_id: users_id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Generate database token untuk auto-login 30 hari
+        const databaseToken = `T${Date.now()}-${users_id}`;
+        const databaseTokenExpiry = new Date();
+        databaseTokenExpiry.setDate(databaseTokenExpiry.getDate() + 30);
+
+        // Save database token
+        await AuthModel.saveToken(users_id, databaseToken, databaseTokenExpiry);
+
         const processingTime = Date.now() - startTime;
 
         // Log successful registration
@@ -184,11 +199,25 @@ exports.register = async (req, res, next) => {
             full_name,
             ip: req.ip,
             processing_time_ms: processingTime,
-            fcm_token_provided: !!fcm_token
+            fcm_token_provided: !!fcm_token,
+            token_generated: true
         }, 'modul-autentikasi');
 
-        // Response success
-        return createdResponse(res, createdUser, 'Pendaftaran berhasil');
+        // Response success dengan token (sama seperti login)
+        return createdResponse(res, {
+            user: {
+                users_id: createdUser.users_id,
+                full_name: createdUser.full_name,
+                email: createdUser.email,
+                total_xp: createdUser.total_xp,
+                status: createdUser.status,
+                user_image_url: null,
+                fcm_token: fcm_token || null
+            },
+            access_token: accessToken,
+            database_token: databaseToken,
+            expires_in: 3600
+        }, 'Pendaftaran berhasil');
 
     } catch (error) {
         const processingTime = Date.now() - startTime;
@@ -270,29 +299,41 @@ exports.login = async (req, res, next) => {
             return unauthorizedResponse(res, 'Email atau password salah');
         }
 
-        // Generate JWT token
-        const tokenPayload = {
+        // Generate JWT access token (1 hour)
+        const accessTokenPayload = {
             users_id: user.users_id,
-            email: user.email,
             iat: Math.floor(Date.now() / 1000)
         };
 
-        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-            expiresIn: '30d'  // Changed from 24h to 30 days for auto-login
+        const accessToken = jwt.sign(accessTokenPayload, process.env.JWT_SECRET, {
+            expiresIn: '1h'
         });
 
+        // Generate database token untuk auto-login (30 days)
+        const databaseToken = `T${Date.now()}-${user.users_id}`;
+        
         // Calculate token expiry date for database storage (30 days)
         const expiresInDays = 30;
         const tokenExpiryDate = new Date();
         tokenExpiryDate.setDate(tokenExpiryDate.getDate() + expiresInDays);
 
-        // Save token to database
+        // Save database token (bukan JWT) untuk auto-login 30 hari
+        console.log(`💾 Saving database token to DB:`, {
+            users_id: user.users_id,
+            database_token: databaseToken,
+            token_length: databaseToken.length,
+            expiry_date: tokenExpiryDate.toISOString()
+        });
+        
         try {
-            await AuthModel.saveToken(user.users_id, token, tokenExpiryDate);
+            await AuthModel.saveToken(user.users_id, databaseToken, tokenExpiryDate);
+            console.log(`✅ Database token saved successfully for ${user.users_id}`);
             
-            await logActivity('token_saved_to_db', 'success', {
+            await logActivity('tokens_saved_to_db', 'success', {
                 users_id: user.users_id,
-                token_expiry: tokenExpiryDate.toISOString(),
+                access_token_expiry: '1h',
+                database_token: databaseToken,
+                database_token_expiry: tokenExpiryDate.toISOString(),
                 auto_login_days: 30
             }, 'modul-autentikasi');
         } catch (tokenSaveError) {
@@ -357,9 +398,18 @@ exports.login = async (req, res, next) => {
             }, 'modul-autentikasi');
         }
 
-        // Response success dengan data user
+        // Response success dengan format SAMA seperti register
+        console.log(`📤 Sending login response:`, {
+            access_token_length: accessToken.length,
+            database_token: databaseToken,
+            database_token_length: databaseToken.length,
+            user_id: user.users_id
+        });
+        
         return successResponse(res, {
-            token,
+            access_token: accessToken,           // JWT 1 hour
+            database_token: databaseToken,        // Database token 30 days
+            expires_in: 3600,                     // 1 hour in seconds
             user: {
                 users_id: user.users_id,
                 email: user.email,
@@ -696,6 +746,17 @@ exports.autoLogin = async (req, res, next) => {
     try {
         const userId = req.user.users_id;
 
+        // Generate new JWT access token (1 hour)
+        const accessToken = jwt.sign(
+            { users_id: userId },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        console.log('🔄 Auto-login generating new JWT access token');
+        console.log('   User ID:', userId);
+        console.log('   New JWT token length:', accessToken.length);
+
         // Log auto login
         await logActivity('auto_login', 'success', {
             users_id: userId,
@@ -704,9 +765,11 @@ exports.autoLogin = async (req, res, next) => {
             remaining_days: Math.ceil((new Date(req.user.token_validity) - new Date()) / (1000 * 60 * 60 * 24))
         }, 'modul-autentikasi');
 
-        // Return user data sama seperti login biasa
+        // Return user data sama seperti login biasa dengan JWT baru
         return successResponse(res, {
-            token: req.token, // Token yang sudah ada
+            access_token: accessToken, // JWT baru untuk API calls (1 hour)
+            database_token: req.token, // Token database untuk auto-refresh (30 days)
+            expires_in: 3600, // 1 hour in seconds
             user: {
                 users_id: req.user.users_id,
                 email: req.user.email,

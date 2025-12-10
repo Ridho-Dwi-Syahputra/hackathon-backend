@@ -29,13 +29,17 @@ const authenticateTokenEnhanced = authenticateTokenFromDB;
 
 // FUNGSIONAL 1: List lokasi budaya dengan status kunjungan
 // GET /api/map/places
-// Required enhanced auth - untuk cek status kunjungan user dengan auto-login support
-router.get('/places', authenticateTokenEnhanced, detailMapController.getPlacesWithVisitStatus);
+// Required auth - menggunakan JWT token dari header Authorization
+router.get('/places', authenticateToken, detailMapController.getPlacesWithVisitStatus);
+
+// ADDITIONAL: List tempat wisata yang sudah dikunjungi
+// GET /api/map/visited
+router.get('/visited', authenticateToken, detailMapController.getVisitedPlaces);
 
 // FUNGSIONAL 2: Detail lokasi & validasi scan QR
 // GET /api/map/places/:id
-// Required enhanced auth - untuk validasi scan QR berdasarkan status kunjungan
-router.get('/places/:id', authenticateTokenEnhanced, detailMapController.getPlaceDetail);
+// Required auth - untuk validasi scan QR berdasarkan status kunjungan
+router.get('/places/:id', authenticateToken, detailMapController.getPlaceDetail);
 
 /**
  * ===========================================
@@ -45,22 +49,22 @@ router.get('/places/:id', authenticateTokenEnhanced, detailMapController.getPlac
 
 // FUNGSIONAL 3: Mendapatkan semua review untuk tempat wisata tertentu
 // GET /api/map/places/:id/reviews
-// Required enhanced auth - untuk menampilkan review dengan like status user
-router.get('/places/:id/reviews', authenticateTokenEnhanced, reviewMapController.getPlaceReviews);
+// Required auth - menggunakan JWT token dari header Authorization
+router.get('/places/:id/reviews', authenticateToken, reviewMapController.getPlaceReviews);
 
 // FUNGSIONAL 5: Mengelola ulasan (Tambah, Edit, Hapus)
-// POST /api/map/places/:id/reviews/add - Tambah review (EXPLICIT ACTION)
-router.post('/places/:id/reviews/add', authenticateTokenEnhanced, reviewMapController.addReview);
+// POST /api/map/reviews/add - Tambah review (EXPLICIT ACTION) - tourist_place_id di body
+router.post('/reviews/add', authenticateToken, reviewMapController.addReview);
 
 // PUT /api/map/reviews/:id/edit - Edit review (EXPLICIT ACTION)
-router.put('/reviews/:id/edit', authenticateTokenEnhanced, reviewMapController.editReview);
+router.put('/reviews/:id/edit', authenticateToken, reviewMapController.editReview);
 
 // DELETE /api/map/reviews/:id/delete - Hapus review (EXPLICIT ACTION)
-router.delete('/reviews/:id/delete', authenticateTokenEnhanced, reviewMapController.deleteReview);
+router.delete('/reviews/:id/delete', authenticateToken, reviewMapController.deleteReview);
 
 // FUNGSIONAL 4: Toggle like pada review
 // POST /api/reviews/:id/toggle-like
-router.post('/reviews/:id/toggle-like', authenticateTokenEnhanced, reviewMapController.toggleReviewLike);
+router.post('/reviews/:id/toggle-like', authenticateToken, reviewMapController.toggleReviewLike);
 
 /**
  * ===========================================
@@ -70,8 +74,8 @@ router.post('/reviews/:id/toggle-like', authenticateTokenEnhanced, reviewMapCont
 
 // FUNGSIONAL 6: Scan QR code dan catat kunjungan + FCM notification
 // POST /api/map/scan/qr
-// Required enhanced auth - hanya user login dengan valid database token yang bisa scan QR
-router.post('/scan/qr', authenticateTokenEnhanced, scanMapController.scanQRCode);
+// Required auth - menggunakan JWT token dari header Authorization
+router.post('/scan/qr', authenticateToken, scanMapController.scanQRCode);
 
 /**
  * ===========================================
@@ -82,7 +86,7 @@ router.post('/scan/qr', authenticateTokenEnhanced, scanMapController.scanQRCode)
  * - GET    /api/map/places                     - List tempat dengan status kunjungan (Enhanced Auth)
  * - GET    /api/map/places/:id                 - Detail tempat + validasi scan QR (Enhanced Auth)
  * - GET    /api/map/places/:id/reviews         - List review tempat (Enhanced Auth) 
- * - POST   /api/map/places/:id/reviews/add     - Tambah review + FCM notification (Enhanced Auth)
+ * - POST   /api/map/reviews/add                - Tambah review + FCM notification (Enhanced Auth)
  * - PUT    /api/map/reviews/:id/edit           - Edit review user [NEW]
  * - DELETE /api/map/reviews/:id/delete         - Hapus review user [NEW]
  * - POST   /api/map/reviews/:id/toggle-like    - Toggle like review

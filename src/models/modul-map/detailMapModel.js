@@ -98,6 +98,63 @@ class DetailMapModel {
             throw error;
         }
     }
+
+    /**
+     * Get visited places by user with pagination
+     * @param {string} userId - User ID
+     * @param {number} limit - Limit per page
+     * @param {number} offset - Offset for pagination
+     * @returns {Promise<Array>} Array of visited places
+     */
+    static async getVisitedPlacesByUser(userId, limit, offset) {
+        try {
+            const query = `
+                SELECT 
+                    tp.tourist_place_id,
+                    tp.name,
+                    tp.description,
+                    tp.address,
+                    tp.image_url,
+                    tp.average_rating,
+                    uv.status,
+                    uv.visited_at,
+                    uv.created_at as first_visit
+                FROM user_visit uv
+                JOIN tourist_place tp ON uv.tourist_place_id = tp.tourist_place_id
+                WHERE uv.user_id = ? AND uv.status = 'visited' AND tp.is_active = 1
+                ORDER BY uv.visited_at DESC
+                LIMIT ? OFFSET ?
+            `;
+            
+            const result = await db.query(query, [userId, limit, offset]);
+            return result;
+        } catch (error) {
+            console.error('Error getting visited places by user:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get total count of visited places by user
+     * @param {string} userId - User ID
+     * @returns {Promise<number>} Total count of visited places
+     */
+    static async getVisitedPlacesCount(userId) {
+        try {
+            const query = `
+                SELECT COUNT(*) as total_count
+                FROM user_visit uv
+                JOIN tourist_place tp ON uv.tourist_place_id = tp.tourist_place_id
+                WHERE uv.user_id = ? AND uv.status = 'visited' AND tp.is_active = 1
+            `;
+            
+            const result = await db.query(query, [userId]);
+            return result[0]?.total_count || 0;
+        } catch (error) {
+            console.error('Error getting visited places count:', error);
+            throw error;
+        }
+    }
 }
 
 const detailMapModel = DetailMapModel;

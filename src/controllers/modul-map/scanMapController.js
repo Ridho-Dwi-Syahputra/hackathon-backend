@@ -6,7 +6,13 @@
  */
 
 const { scanMapModel } = require('../../models/modul-map/scanMapModel');
-const { responseHelper } = require('../../utils/responseHelper');
+const { 
+    successResponse, 
+    errorResponse, 
+    unauthorizedResponse,
+    notFoundResponse,
+    conflictResponse
+} = require('../../utils/responseHelper');
 const { writeLog, getIndonesianTime } = require('../../utils/logsGenerator');
 const { generateCustomId } = require('../../utils/customIdGenerator');
 const { sendPlaceVisitedNotification } = require('../firebase/notifikasi/modul-map/mapNotifikasiController');
@@ -56,7 +62,7 @@ const scanMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 401, 'UNAUTHORIZED');
+                return errorResponse(res, errorMsg, 401, 'UNAUTHORIZED');
             }
 
             // Validasi parameter QR code
@@ -72,7 +78,7 @@ const scanMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
+                return errorResponse(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
             // Cari tempat wisata berdasarkan QR code
@@ -90,7 +96,7 @@ const scanMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 404, 'INVALID_QR_CODE');
+                return errorResponse(res, errorMsg, 404, 'INVALID_QR_CODE');
             }
 
             // Ambil detail tempat wisata
@@ -116,7 +122,7 @@ const scanMapController = {
                     }
                 );
 
-                return responseHelper.error(res, errorMsg, 409, 'ALREADY_VISITED');
+                return errorResponse(res, errorMsg, 409, 'ALREADY_VISITED');
             }
             
             let visitData = null;
@@ -137,7 +143,7 @@ const scanMapController = {
                     }
                 );
 
-                return responseHelper.error(res, errorMsg, 404, 'VISIT_RECORD_NOT_FOUND');
+                return errorResponse(res, errorMsg, 404, 'VISIT_RECORD_NOT_FOUND');
             }
 
             // Update status dari 'not_visited' menjadi 'visited' dengan visited_at = NOW()
@@ -225,7 +231,7 @@ const scanMapController = {
 
             const message = `Selamat datang di ${touristPlace.name}! Kunjungan Anda telah tercatat pada ${visitData.visited_at}.`;
 
-            return responseHelper.success(res, message, response);
+            return successResponse(res, message, response);
 
         } catch (error) {
             const duration = Date.now() - startTime;
@@ -244,7 +250,7 @@ const scanMapController = {
                 }
             );
 
-            return responseHelper.error(res, 
+            return errorResponse(res, 
                 'Terjadi kesalahan saat memproses scan QR code', 
                 500, 
                 'INTERNAL_SERVER_ERROR'
@@ -254,3 +260,5 @@ const scanMapController = {
 };
 
 module.exports = { scanMapController };
+
+
