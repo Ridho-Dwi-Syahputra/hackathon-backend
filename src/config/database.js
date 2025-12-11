@@ -151,6 +151,10 @@ module.exports = {
     query: async (sql, params) => {
         const [rows] = await pool.execute(sql, params);
         return rows;
+    },
+    // Add getConnection method for transaction support
+    getConnection: async () => {
+        return await pool.getConnection();
     }
 };
 

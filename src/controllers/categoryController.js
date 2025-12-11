@@ -5,7 +5,9 @@ exports.getCategories = async (req, res, next) => {
   try {
     const userId = req.user.users_id;
 
-    const [categories] = await db.query(
+    console.log('🔍 [getCategories] Fetching categories for user:', userId);
+
+    const result = await db.query(
       `SELECT 
          c.id, 
          c.name, 
@@ -21,6 +23,15 @@ exports.getCategories = async (req, res, next) => {
        ORDER BY c.display_order ASC`,
       [userId]
     );
+
+    console.log('📊 [getCategories] Query result type:', typeof result);
+    console.log('📊 [getCategories] Is Array?:', Array.isArray(result));
+    console.log('📊 [getCategories] Result length:', result ? result.length : 'null');
+
+    // Handle different result formats
+    const categories = Array.isArray(result) ? result : (Array.isArray(result[0]) ? result[0] : []);
+    
+    console.log('✅ [getCategories] Categories found:', categories.length);
 
     res.json({
       status: 'success',
@@ -40,6 +51,7 @@ exports.getCategories = async (req, res, next) => {
     });
 
   } catch (error) {
+    console.error('❌ [getCategories] Error:', error);
     next(error);
   }
 };
@@ -50,11 +62,16 @@ exports.getCategoryLevels = async (req, res, next) => {
     const userId = req.user.users_id;
     const categoryId = req.params.id;
 
+    console.log('🔍 [getCategoryLevels] Fetching levels for category:', categoryId, 'user:', userId);
+
     // Check if category exists
-    const [categories] = await db.query(
+    const categoryResult = await db.query(
       'SELECT id, name, description, is_active, display_order FROM quiz_category WHERE id = ? AND is_active = 1',
       [categoryId]
     );
+
+    const categories = Array.isArray(categoryResult) ? categoryResult : (Array.isArray(categoryResult[0]) ? categoryResult[0] : []);
+    console.log('📊 [getCategoryLevels] Categories found:', categories.length);
 
     if (categories.length === 0) {
       return res.status(404).json({
@@ -64,7 +81,7 @@ exports.getCategoryLevels = async (req, res, next) => {
     }
 
     // Get levels with progress
-    const [levels] = await db.query(
+    const levelResult = await db.query(
       `SELECT 
          l.id, 
          l.name, 
@@ -87,6 +104,9 @@ exports.getCategoryLevels = async (req, res, next) => {
       [userId, categoryId]
     );
 
+    const levels = Array.isArray(levelResult) ? levelResult : (Array.isArray(levelResult[0]) ? levelResult[0] : []);
+    console.log('📊 [getCategoryLevels] Levels found:', levels.length);
+
     // Determine actual status based on prerequisites
     for (let level of levels) {
       if (level.progress_status) {
@@ -94,10 +114,11 @@ exports.getCategoryLevels = async (req, res, next) => {
         level.status = level.progress_status;
       } else {
         // No progress yet, check if unlocked based on prerequisites
-        const [prerequisites] = await db.query(
+        const prereqResult = await db.query(
           'SELECT required_level_id FROM prerequisite_level WHERE level_id = ?',
           [level.id]
         );
+        const prerequisites = Array.isArray(prereqResult) ? prereqResult : (Array.isArray(prereqResult[0]) ? prereqResult[0] : []);
 
         if (prerequisites.length === 0) {
           // No prerequisites, level is unlocked
@@ -106,12 +127,13 @@ exports.getCategoryLevels = async (req, res, next) => {
           // Check if all prerequisites are met
           let allMet = true;
           for (let prereq of prerequisites) {
-            const [reqProgress] = await db.query(
+            const progressResult = await db.query(
               `SELECT status, best_percent_correct 
                FROM user_level_progress 
                WHERE user_id = ? AND level_id = ?`,
               [userId, prereq.required_level_id]
             );
+            const reqProgress = Array.isArray(progressResult) ? progressResult : (Array.isArray(progressResult[0]) ? progressResult[0] : []);
 
             if (reqProgress.length === 0 || reqProgress[0].status !== 'completed') {
               allMet = false;
@@ -119,10 +141,11 @@ exports.getCategoryLevels = async (req, res, next) => {
             }
 
             // Check if passing grade met
-            const [reqLevel] = await db.query(
+            const levelResult = await db.query(
               'SELECT pass_threshold FROM level WHERE id = ?',
               [prereq.required_level_id]
             );
+            const reqLevel = Array.isArray(levelResult) ? levelResult : (Array.isArray(levelResult[0]) ? levelResult[0] : []);
 
             if (reqProgress[0].best_percent_correct < reqLevel[0].pass_threshold) {
               allMet = false;
@@ -172,6 +195,7 @@ exports.getCategoryLevels = async (req, res, next) => {
     });
 
   } catch (error) {
+    console.error('❌ [getCategoryLevels] Error:', error);
     next(error);
   }
 };

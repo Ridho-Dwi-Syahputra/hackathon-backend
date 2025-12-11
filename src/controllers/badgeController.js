@@ -7,7 +7,7 @@ exports.getAllBadges = async (req, res, next) => {
   try {
     const userId = req.user.users_id;
 
-    const [badges] = await db.query(
+    const badgesResult = await db.query(
       `SELECT 
          b.id, 
          b.name, 
@@ -22,6 +22,7 @@ exports.getAllBadges = async (req, res, next) => {
        ORDER BY is_earned DESC, b.name ASC`,
       [userId]
     );
+    const badges = Array.isArray(badgesResult) ? badgesResult : (Array.isArray(badgesResult[0]) ? badgesResult[0] : []);
 
     res.json({
       success: true,
@@ -38,7 +39,7 @@ exports.getUserBadges = async (req, res, next) => {
   try {
     const userId = req.user.users_id;
 
-    const [badges] = await db.query(
+    const badgesResult = await db.query(
       `SELECT 
          b.id, 
          b.name, 
@@ -54,6 +55,7 @@ exports.getUserBadges = async (req, res, next) => {
        ORDER BY ub.earned_at DESC`,
       [userId]
     );
+    const badges = Array.isArray(badgesResult) ? badgesResult : (Array.isArray(badgesResult[0]) ? badgesResult[0] : []);
 
     res.json({
       success: true,

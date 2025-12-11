@@ -87,7 +87,7 @@ try {
     // Mount routes
     app.use('/api/auth', authRoutes);
     app.use('/api/quiz', quizRoutes);
-    app.use('/api/category', categoryRoutes);
+    app.use('/api/categories', categoryRoutes);  // ✅ PLURAL sesuai frontend
     app.use('/api/map', mapRoutes);
 
     // FUNGSIONAL 6: Mount scan endpoint terpisah
