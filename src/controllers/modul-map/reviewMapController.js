@@ -97,13 +97,13 @@ const reviewMapController = {
             const result = await reviewMapModel.toggleReviewLike(userId, reviewId, reviewLikeId);
 
             return successResponse(res, 
-                result.action === 'liked' ? 'Review berhasil disukai' : 'Like review berhasil dihapus', 
                 {
                     review_id: reviewId,
                     action: result.action,
                     total_likes: result.total_likes,
                     is_liked_by_me: result.action === 'liked'
-                }
+                },
+                result.action === 'liked' ? 'Review berhasil disukai' : 'Like review berhasil dihapus'
             );
 
         } catch (error) {

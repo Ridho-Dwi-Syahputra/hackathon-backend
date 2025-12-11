@@ -111,16 +111,19 @@ class ReviewMapModel {
      * @returns {Promise<Object>} Like status and total likes
      */
     static async toggleReviewLike(userId, reviewId, reviewLikeId = null) {
+        let connection;
         try {
-            // Start transaction
-            await db.query('START TRANSACTION');
+            // Get connection from pool for transaction
+            connection = await db.getConnection();
+            await connection.beginTransaction();
 
             // Check if review exists
             const reviewQuery = `SELECT review_id FROM review WHERE review_id = ?`;
-            const reviewResult = await db.query(reviewQuery, [reviewId]);
+            const [reviewResult] = await connection.execute(reviewQuery, [reviewId]);
             
             if (reviewResult.length === 0) {
-                await db.query('ROLLBACK');
+                await connection.rollback();
+                connection.release();
                 throw new Error('Review tidak ditemukan');
             }
 
@@ -130,7 +133,7 @@ class ReviewMapModel {
                 FROM review_like 
                 WHERE user_id = ? AND review_id = ?
             `;
-            const likeResult = await db.query(likeQuery, [userId, reviewId]);
+            const [likeResult] = await connection.execute(likeQuery, [userId, reviewId]);
 
             let action;
             if (likeResult.length === 0) {
@@ -140,15 +143,8 @@ class ReviewMapModel {
                     INSERT INTO review_like (review_like_id, user_id, review_id, created_at)
                     VALUES (?, ?, ?, NOW())
                 `;
-                await db.query(insertLikeQuery, [likeId, userId, reviewId]);
-
-                // Update total likes (+1)
-                const updateQuery = `
-                    UPDATE review 
-                    SET total_likes = total_likes + 1 
-                    WHERE review_id = ?
-                `;
-                await db.query(updateQuery, [reviewId]);
+                await connection.execute(insertLikeQuery, [likeId, userId, reviewId]);
+                // Trigger akan otomatis update total_likes
                 action = 'liked';
             } else {
                 // Remove like
@@ -156,15 +152,8 @@ class ReviewMapModel {
                     DELETE FROM review_like 
                     WHERE user_id = ? AND review_id = ?
                 `;
-                await db.query(deleteLikeQuery, [userId, reviewId]);
-
-                // Update total likes (-1)
-                const updateQuery = `
-                    UPDATE review 
-                    SET total_likes = GREATEST(total_likes - 1, 0) 
-                    WHERE review_id = ?
-                `;
-                await db.query(updateQuery, [reviewId]);
+                await connection.execute(deleteLikeQuery, [userId, reviewId]);
+                // Trigger akan otomatis update total_likes
                 action = 'unliked';
             }
 
@@ -174,17 +163,21 @@ class ReviewMapModel {
                 FROM review 
                 WHERE review_id = ?
             `;
-            const totalLikesResult = await db.query(totalLikesQuery, [reviewId]);
+            const [totalLikesResult] = await connection.execute(totalLikesQuery, [reviewId]);
             const totalLikes = totalLikesResult[0].total_likes;
 
-            await db.query('COMMIT');
+            await connection.commit();
+            connection.release();
 
             return {
                 action: action,
                 total_likes: totalLikes
             };
         } catch (error) {
-            await db.query('ROLLBACK');
+            if (connection) {
+                await connection.rollback();
+                connection.release();
+            }
             console.error('Error toggling review like:', error);
             throw error;
         }
