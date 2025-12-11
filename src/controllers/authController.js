@@ -476,6 +476,16 @@ exports.logout = async (req, res, next) => {
 
 /**
  * Get user profile
+ * 
+ * ⚠️ DEPRECATED: This function has been moved to profileController.js
+ * 
+ * Reason: ProfileScreen needs comprehensive stats (quiz attempts, completed levels, 
+ * visited places, badges) which are not available in this basic profile endpoint.
+ * 
+ * New endpoint: GET /api/auth/profile (handled by profileController.getProfile)
+ * 
+ * This function is kept here for backward compatibility but is NOT used by any route.
+ * Consider removing in future cleanup.
  */
 exports.getProfile = async (req, res, next) => {
     try {
@@ -484,7 +494,8 @@ exports.getProfile = async (req, res, next) => {
         // Log profile access
         await logActivity('profile_access', 'attempt', {
             users_id: userId,
-            ip: req.ip
+            ip: req.ip,
+            deprecated_warning: 'Using deprecated authController.getProfile'
         }, 'modul-autentikasi');
 
         // Get user data
@@ -514,7 +525,8 @@ exports.getProfile = async (req, res, next) => {
         // Log successful profile access
         await logActivity('profile_access', 'success', {
             users_id: userId,
-            ip: req.ip
+            ip: req.ip,
+            deprecated_warning: 'Using deprecated authController.getProfile - migrate to profileController'
         }, 'modul-autentikasi');
 
         return successResponse(res, {
@@ -526,7 +538,7 @@ exports.getProfile = async (req, res, next) => {
             user_image_url: user.user_image_url,
             notification_preferences: notificationPreferences,
             created_at: user.created_at
-        }, 'Data profil berhasil diambil');
+        }, 'Data profil berhasil diambil (DEPRECATED - gunakan /api/auth/profile)');
 
     } catch (error) {
         await logError('get_profile_error', error, {
@@ -586,157 +598,8 @@ exports.updateFcmToken = async (req, res, next) => {
     }
 };
 
-/**
- * Update notification preferences
- */
-exports.updateNotificationPreferences = async (req, res, next) => {
-    try {
-        const userId = req.user.users_id;
-        const { notification_preferences } = req.body;
-
-        // Log notification preferences update attempt
-        await logActivity('notification_preferences_update', 'attempt', {
-            users_id: userId,
-            ip: req.ip
-        }, 'modul-autentikasi');
-
-        if (!notification_preferences || typeof notification_preferences !== 'object') {
-            return validationErrorResponse(res, 'Notification preferences harus berupa object');
-        }
-
-        // Validate notification preferences structure sesuai implementasi aktual
-        const validTopLevelKeys = ['system_announcements', 'marketing', 'map_notifications'];
-        const validMapNotificationKeys = ['review_added', 'place_visited']; // Hanya 2 yang ada
-        
-        // TODO: Aktifkan setelah quiz system ada di database
-        // const validQuizKeys = ['quiz_reminder', 'achievement_unlock'];
-        
-        const providedKeys = Object.keys(notification_preferences);
-        
-        const invalidKeys = providedKeys.filter(key => !validTopLevelKeys.includes(key));
-        if (invalidKeys.length > 0) {
-            await logActivity('notification_preferences_update', 'failed', {
-                users_id: userId,
-                reason: 'Invalid top-level keys',
-                invalid_keys: invalidKeys,
-                valid_keys: validTopLevelKeys,
-                ip: req.ip
-            }, 'modul-autentikasi');
-            
-            return validationErrorResponse(res, `Invalid notification preference keys: ${invalidKeys.join(', ')}. Valid keys: ${validTopLevelKeys.join(', ')}`);
-        }
-        
-        // Validate map_notifications structure if provided
-        if (notification_preferences.map_notifications) {
-            const mapKeys = Object.keys(notification_preferences.map_notifications);
-            const invalidMapKeys = mapKeys.filter(key => !validMapNotificationKeys.includes(key));
-            if (invalidMapKeys.length > 0) {
-                await logActivity('notification_preferences_update', 'failed', {
-                    users_id: userId,
-                    reason: 'Invalid map notification keys',
-                    invalid_map_keys: invalidMapKeys,
-                    valid_map_keys: validMapNotificationKeys,
-                    ip: req.ip
-                }, 'modul-autentikasi');
-                
-                return validationErrorResponse(res, `Invalid map notification keys: ${invalidMapKeys.join(', ')}. Valid keys: ${validMapNotificationKeys.join(', ')}`);
-            }
-        }
-
-        // Update notification preferences
-        await AuthModel.updateNotificationPreferences(userId, notification_preferences);
-
-        // Log successful update
-        await logActivity('notification_preferences_update', 'success', {
-            users_id: userId,
-            updated_preferences: notification_preferences,
-            ip: req.ip
-        }, 'modul-autentikasi');
-
-        return successResponse(res, null, 'Preferensi notifikasi berhasil diupdate');
-
-    } catch (error) {
-        await logError('update_notification_preferences_error', error, {
-            users_id: req.user?.users_id,
-            ip: req.ip,
-            stack: error.stack
-        }, 'modul-autentikasi');
-        
-        next(error);
-    }
-};
-
-/**
- * Get notification preferences
- */
-exports.getNotificationPreferences = async (req, res, next) => {
-    try {
-        const userId = req.user.users_id;
-
-        // Log preferences access
-        await logActivity('get_notification_preferences', 'attempt', {
-            users_id: userId,
-            ip: req.ip
-        }, 'modul-autentikasi');
-
-        // Get user notification preferences
-        const result = await AuthModel.getNotificationPreferences(userId);
-
-        if (!result) {
-            return notFoundResponse(res, 'User tidak ditemukan');
-        }
-
-        let notificationPreferences = null;
-        try {
-            notificationPreferences = result.notification_preferences ? 
-                JSON.parse(result.notification_preferences) : {
-                    // Default structure sesuai implementasi aktual
-                    system_announcements: true,
-                    marketing: false,
-                    map_notifications: {
-                        review_added: true,      // sendReviewAddedNotification()
-                        place_visited: true      // sendPlaceVisitedNotification()
-                    }
-                    // TODO: Quiz system belum ada di sako.sql
-                    // quiz_reminder: true,
-                    // achievement_unlock: true,
-                };
-        } catch (parseError) {
-            await logError('notification_preferences_parse_error', parseError, {
-                users_id: userId,
-                raw_data: result.notification_preferences
-            }, 'modul-autentikasi');
-            
-            // Return default preferences jika parse error (sesuai implementasi aktual)
-            notificationPreferences = {
-                system_announcements: true,
-                marketing: false,
-                map_notifications: {
-                    review_added: true,      // Dari mapNotifikasiController.js
-                    place_visited: true      // Dari mapNotifikasiController.js
-                }
-                // TODO: Quiz system belum diimplementasikan di sako.sql
-            };
-        }
-
-        // Log successful access
-        await logActivity('get_notification_preferences', 'success', {
-            users_id: userId,
-            ip: req.ip
-        }, 'modul-autentikasi');
-
-        return successResponse(res, notificationPreferences, 'Preferensi notifikasi berhasil diambil');
-
-    } catch (error) {
-        await logError('get_notification_preferences_error', error, {
-            users_id: req.user?.users_id,
-            ip: req.ip,
-            stack: error.stack
-        }, 'modul-autentikasi');
-        
-        next(error);
-    }
-};
+// NOTE: updateNotificationPreferences dan getNotificationPreferences 
+// dipindahkan ke settingController.js (modul-profile/settingController.js)
 
 /**
  * FUNGSIONAL AUTH BARU: Auto Login (30 Days Token Validation)

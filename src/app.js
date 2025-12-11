@@ -95,7 +95,9 @@ try {
 
     // Mount routes tambahan jika berhasil diimport
     if (badgeRoutes) app.use('/api/badge', badgeRoutes);
-    if (profileRoutes) app.use('/api/profile', profileRoutes);
+    // Profile routes dipasang di /api/auth (sama dengan authRoutes untuk konsistensi)
+    // Sudah termasuk notification preferences dari settingController
+    if (profileRoutes) app.use('/api/auth', profileRoutes);
     if (videoRoutes) app.use('/api/videos', videoRoutes);
 } catch (routeError) {
     console.warn('⚠️ Warning: Some routes failed to load:', routeError.message);

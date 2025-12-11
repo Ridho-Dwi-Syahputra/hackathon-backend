@@ -13,12 +13,12 @@ router.post('/login', authController.login);
 
 // Protected routes (require authentication)
 router.post('/logout', authMiddleware, authController.logout);
-router.get('/profile', authMiddleware, authController.getProfile);
+// NOTE: GET /profile dipindahkan ke profileRoutes untuk stats lengkap
+// router.get('/profile', authMiddleware, authController.getProfile);
 
-// FCM & Notification routes
+// FCM routes
 router.put('/fcm-token', authMiddleware, authController.updateFcmToken);
-router.put('/notification-preferences', authMiddleware, authController.updateNotificationPreferences);
-router.get('/notification-preferences', authMiddleware, authController.getNotificationPreferences);
+// NOTE: Notification preferences routes dipindahkan ke settingRoutes.js (modul-profile)
 
 // ====== DATABASE TOKEN MANAGEMENT ROUTES ======
 // Menggunakan database token middleware
