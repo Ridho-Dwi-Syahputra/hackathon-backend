@@ -205,6 +205,17 @@ exports.register = async (req, res, next) => {
 
         const createdUser = await AuthModel.createUser(userData);
 
+        // Generate JWT token untuk auto-login setelah register
+        const accessToken = jwt.sign({ users_id: users_id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Generate database token untuk auto-login 30 hari
+        const databaseToken = `T${Date.now()}-${users_id}`;
+        const databaseTokenExpiry = new Date();
+        databaseTokenExpiry.setDate(databaseTokenExpiry.getDate() + 30);
+
+        // Save database token
+        await AuthModel.saveToken(users_id, databaseToken, databaseTokenExpiry);
+
         const processingTime = Date.now() - startTime;
 
         // Log successful registration
@@ -218,12 +229,30 @@ exports.register = async (req, res, next) => {
                 ip: req.ip,
                 processing_time_ms: processingTime,
                 fcm_token_provided: !!fcm_token,
+                token_generated: true,
             },
             'modul-autentikasi'
         );
 
-        // Response success
-        return createdResponse(res, createdUser, 'Pendaftaran berhasil');
+        // Response success dengan token (sama seperti login)
+        return createdResponse(
+            res,
+            {
+                user: {
+                    users_id: createdUser.users_id,
+                    full_name: createdUser.full_name,
+                    email: createdUser.email,
+                    total_xp: createdUser.total_xp,
+                    status: createdUser.status,
+                    user_image_url: null,
+                    fcm_token: fcm_token || null,
+                },
+                access_token: accessToken,
+                database_token: databaseToken,
+                expires_in: 3600,
+            },
+            'Pendaftaran berhasil'
+        );
     } catch (error) {
         const processingTime = Date.now() - startTime;
 
@@ -334,32 +363,44 @@ exports.login = async (req, res, next) => {
             return unauthorizedResponse(res, 'Email atau password salah');
         }
 
-        // Generate JWT token
-        const tokenPayload = {
+        // Generate JWT access token (1 hour)
+        const accessTokenPayload = {
             users_id: user.users_id,
-            email: user.email,
             iat: Math.floor(Date.now() / 1000),
         };
 
-        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-            expiresIn: '30d', // Changed from 24h to 30 days for auto-login
+        const accessToken = jwt.sign(accessTokenPayload, process.env.JWT_SECRET, {
+            expiresIn: '1h',
         });
+
+        // Generate database token untuk auto-login (30 days)
+        const databaseToken = `T${Date.now()}-${user.users_id}`;
 
         // Calculate token expiry date for database storage (30 days)
         const expiresInDays = 30;
         const tokenExpiryDate = new Date();
         tokenExpiryDate.setDate(tokenExpiryDate.getDate() + expiresInDays);
 
-        // Save token to database
+        // Save database token (bukan JWT) untuk auto-login 30 hari
+        console.log(`💾 Saving database token to DB:`, {
+            users_id: user.users_id,
+            database_token: databaseToken,
+            token_length: databaseToken.length,
+            expiry_date: tokenExpiryDate.toISOString(),
+        });
+
         try {
-            await AuthModel.saveToken(user.users_id, token, tokenExpiryDate);
+            await AuthModel.saveToken(user.users_id, databaseToken, tokenExpiryDate);
+            console.log(`✅ Database token saved successfully for ${user.users_id}`);
 
             await logActivity(
-                'token_saved_to_db',
+                'tokens_saved_to_db',
                 'success',
                 {
                     users_id: user.users_id,
-                    token_expiry: tokenExpiryDate.toISOString(),
+                    access_token_expiry: '1h',
+                    database_token: databaseToken,
+                    database_token_expiry: tokenExpiryDate.toISOString(),
                     auto_login_days: 30,
                 },
                 'modul-autentikasi'
@@ -450,15 +491,20 @@ exports.login = async (req, res, next) => {
             );
         }
 
-        // Response success dengan data user
+        // Response success dengan format SAMA seperti register
+        console.log(`📤 Sending login response:`, {
+            access_token_length: accessToken.length,
+            database_token: databaseToken,
+            database_token_length: databaseToken.length,
+            user_id: user.users_id,
+        });
+
         return successResponse(
             res,
             {
-                token,
-                access_token: token, // snake_case untuk Gson Android
-                accessToken: token, // camelCase untuk kompatibilitas
-                database_token: token, // snake_case untuk Gson Android
-                databaseToken: token, // camelCase untuk kompatibilitas
+                access_token: accessToken, // JWT 1 hour
+                database_token: databaseToken, // Database token 30 days
+                expires_in: 3600, // 1 hour in seconds
                 user: {
                     users_id: user.users_id,
                     email: user.email,
@@ -545,6 +591,16 @@ exports.logout = async (req, res, next) => {
 
 /**
  * Get user profile
+ *
+ * ⚠️ DEPRECATED: This function has been moved to profileController.js
+ *
+ * Reason: ProfileScreen needs comprehensive stats (quiz attempts, completed levels,
+ * visited places, badges) which are not available in this basic profile endpoint.
+ *
+ * New endpoint: GET /api/auth/profile (handled by profileController.getProfile)
+ *
+ * This function is kept here for backward compatibility but is NOT used by any route.
+ * Consider removing in future cleanup.
  */
 exports.getProfile = async (req, res, next) => {
     try {
@@ -557,6 +613,7 @@ exports.getProfile = async (req, res, next) => {
             {
                 users_id: userId,
                 ip: req.ip,
+                deprecated_warning: 'Using deprecated authController.getProfile',
             },
             'modul-autentikasi'
         );
@@ -601,6 +658,7 @@ exports.getProfile = async (req, res, next) => {
             {
                 users_id: userId,
                 ip: req.ip,
+                deprecated_warning: 'Using deprecated authController.getProfile - migrate to profileController',
             },
             'modul-autentikasi'
         );
@@ -617,7 +675,7 @@ exports.getProfile = async (req, res, next) => {
                 notification_preferences: notificationPreferences,
                 created_at: user.created_at,
             },
-            'Data profil berhasil diambil'
+            'Data profil berhasil diambil (DEPRECATED - gunakan /api/auth/profile)'
         );
     } catch (error) {
         await logError(
@@ -701,201 +759,8 @@ exports.updateFcmToken = async (req, res, next) => {
     }
 };
 
-/**
- * Update notification preferences
- */
-exports.updateNotificationPreferences = async (req, res, next) => {
-    try {
-        const userId = req.user.users_id;
-        const { notification_preferences } = req.body;
-
-        // Log notification preferences update attempt
-        await logActivity(
-            'notification_preferences_update',
-            'attempt',
-            {
-                users_id: userId,
-                ip: req.ip,
-            },
-            'modul-autentikasi'
-        );
-
-        if (!notification_preferences || typeof notification_preferences !== 'object') {
-            return validationErrorResponse(res, 'Notification preferences harus berupa object');
-        }
-
-        // Validate notification preferences structure sesuai implementasi aktual
-        const validTopLevelKeys = ['system_announcements', 'marketing', 'map_notifications'];
-        const validMapNotificationKeys = ['review_added', 'place_visited']; // Hanya 2 yang ada
-
-        // TODO: Aktifkan setelah quiz system ada di database
-        // const validQuizKeys = ['quiz_reminder', 'achievement_unlock'];
-
-        const providedKeys = Object.keys(notification_preferences);
-
-        const invalidKeys = providedKeys.filter((key) => !validTopLevelKeys.includes(key));
-        if (invalidKeys.length > 0) {
-            await logActivity(
-                'notification_preferences_update',
-                'failed',
-                {
-                    users_id: userId,
-                    reason: 'Invalid top-level keys',
-                    invalid_keys: invalidKeys,
-                    valid_keys: validTopLevelKeys,
-                    ip: req.ip,
-                },
-                'modul-autentikasi'
-            );
-
-            return validationErrorResponse(res, `Invalid notification preference keys: ${invalidKeys.join(', ')}. Valid keys: ${validTopLevelKeys.join(', ')}`);
-        }
-
-        // Validate map_notifications structure if provided
-        if (notification_preferences.map_notifications) {
-            const mapKeys = Object.keys(notification_preferences.map_notifications);
-            const invalidMapKeys = mapKeys.filter((key) => !validMapNotificationKeys.includes(key));
-            if (invalidMapKeys.length > 0) {
-                await logActivity(
-                    'notification_preferences_update',
-                    'failed',
-                    {
-                        users_id: userId,
-                        reason: 'Invalid map notification keys',
-                        invalid_map_keys: invalidMapKeys,
-                        valid_map_keys: validMapNotificationKeys,
-                        ip: req.ip,
-                    },
-                    'modul-autentikasi'
-                );
-
-                return validationErrorResponse(res, `Invalid map notification keys: ${invalidMapKeys.join(', ')}. Valid keys: ${validMapNotificationKeys.join(', ')}`);
-            }
-        }
-
-        // Update notification preferences
-        await AuthModel.updateNotificationPreferences(userId, notification_preferences);
-
-        // Log successful update
-        await logActivity(
-            'notification_preferences_update',
-            'success',
-            {
-                users_id: userId,
-                updated_preferences: notification_preferences,
-                ip: req.ip,
-            },
-            'modul-autentikasi'
-        );
-
-        return successResponse(res, null, 'Preferensi notifikasi berhasil diupdate');
-    } catch (error) {
-        await logError(
-            'update_notification_preferences_error',
-            error,
-            {
-                users_id: req.user?.users_id,
-                ip: req.ip,
-                stack: error.stack,
-            },
-            'modul-autentikasi'
-        );
-
-        next(error);
-    }
-};
-
-/**
- * Get notification preferences
- */
-exports.getNotificationPreferences = async (req, res, next) => {
-    try {
-        const userId = req.user.users_id;
-
-        // Log preferences access
-        await logActivity(
-            'get_notification_preferences',
-            'attempt',
-            {
-                users_id: userId,
-                ip: req.ip,
-            },
-            'modul-autentikasi'
-        );
-
-        // Get user notification preferences
-        const result = await AuthModel.getNotificationPreferences(userId);
-
-        if (!result) {
-            return notFoundResponse(res, 'User tidak ditemukan');
-        }
-
-        let notificationPreferences = null;
-        try {
-            notificationPreferences = result.notification_preferences
-                ? JSON.parse(result.notification_preferences)
-                : {
-                      // Default structure sesuai implementasi aktual
-                      system_announcements: true,
-                      marketing: false,
-                      map_notifications: {
-                          review_added: true, // sendReviewAddedNotification()
-                          place_visited: true, // sendPlaceVisitedNotification()
-                      },
-                      // TODO: Quiz system belum ada di sako.sql
-                      // quiz_reminder: true,
-                      // achievement_unlock: true,
-                  };
-        } catch (parseError) {
-            await logError(
-                'notification_preferences_parse_error',
-                parseError,
-                {
-                    users_id: userId,
-                    raw_data: result.notification_preferences,
-                },
-                'modul-autentikasi'
-            );
-
-            // Return default preferences jika parse error (sesuai implementasi aktual)
-            notificationPreferences = {
-                system_announcements: true,
-                marketing: false,
-                map_notifications: {
-                    review_added: true, // Dari mapNotifikasiController.js
-                    place_visited: true, // Dari mapNotifikasiController.js
-                },
-                // TODO: Quiz system belum diimplementasikan di sako.sql
-            };
-        }
-
-        // Log successful access
-        await logActivity(
-            'get_notification_preferences',
-            'success',
-            {
-                users_id: userId,
-                ip: req.ip,
-            },
-            'modul-autentikasi'
-        );
-
-        return successResponse(res, notificationPreferences, 'Preferensi notifikasi berhasil diambil');
-    } catch (error) {
-        await logError(
-            'get_notification_preferences_error',
-            error,
-            {
-                users_id: req.user?.users_id,
-                ip: req.ip,
-                stack: error.stack,
-            },
-            'modul-autentikasi'
-        );
-
-        next(error);
-    }
-};
+// NOTE: updateNotificationPreferences dan getNotificationPreferences
+// dipindahkan ke settingController.js (modul-profile/settingController.js)
 
 /**
  * FUNGSIONAL AUTH BARU: Auto Login (30 Days Token Validation)
@@ -904,6 +769,13 @@ exports.getNotificationPreferences = async (req, res, next) => {
 exports.autoLogin = async (req, res, next) => {
     try {
         const userId = req.user.users_id;
+
+        // Generate new JWT access token (1 hour)
+        const accessToken = jwt.sign({ users_id: userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        console.log('🔄 Auto-login generating new JWT access token');
+        console.log('   User ID:', userId);
+        console.log('   New JWT token length:', accessToken.length);
 
         // Log auto login
         await logActivity(
@@ -918,11 +790,13 @@ exports.autoLogin = async (req, res, next) => {
             'modul-autentikasi'
         );
 
-        // Return user data sama seperti login biasa
+        // Return user data sama seperti login biasa dengan JWT baru
         return successResponse(
             res,
             {
-                token: req.token, // Token yang sudah ada
+                access_token: accessToken, // JWT baru untuk API calls (1 hour)
+                database_token: req.token, // Token database untuk auto-refresh (30 days)
+                expires_in: 3600, // 1 hour in seconds
                 user: {
                     users_id: req.user.users_id,
                     email: req.user.email,

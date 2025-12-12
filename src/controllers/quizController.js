@@ -19,9 +19,10 @@ exports.startQuiz = async (req, res, next) => {
     }
 
     // 1. Cek level exists dan active
-    const [levels] = await db.query(`
+    const levelResult = await db.query(`
       SELECT * FROM level WHERE id = ? AND is_active = 1
     `, [level_id]);
+    const levels = Array.isArray(levelResult) ? levelResult : (Array.isArray(levelResult[0]) ? levelResult[0] : []);
 
     if (levels.length === 0) {
       return res.status(404).json({
@@ -46,7 +47,7 @@ exports.startQuiz = async (req, res, next) => {
     const seed = Math.floor(Math.random() * 1000000);
 
     // 4. Query questions dengan options
-    const [questions] = await db.query(`
+    const questionsResult = await db.query(`
       SELECT 
         q.id,
         q.text,
@@ -57,6 +58,7 @@ exports.startQuiz = async (req, res, next) => {
       WHERE q.level_id = ? AND q.is_active = 1
       ORDER BY q.display_order
     `, [level_id]);
+    const questions = Array.isArray(questionsResult) ? questionsResult : (Array.isArray(questionsResult[0]) ? questionsResult[0] : []);
 
     if (questions.length === 0) {
       return res.status(404).json({
@@ -67,7 +69,7 @@ exports.startQuiz = async (req, res, next) => {
 
     // 5. Untuk setiap question, ambil options (TANPA is_correct!)
     for (let question of questions) {
-      const [options] = await db.query(`
+      const optionsResult = await db.query(`
         SELECT 
           id,
           label,
@@ -77,6 +79,7 @@ exports.startQuiz = async (req, res, next) => {
         WHERE question_id = ?
         ORDER BY display_order
       `, [question.id]);
+      const options = Array.isArray(optionsResult) ? optionsResult : (Array.isArray(optionsResult[0]) ? optionsResult[0] : []);
       
       question.options = options;
     }
@@ -169,6 +172,8 @@ exports.submitQuiz = async (req, res, next) => {
     const userId = req.user.users_id;
     const { attempt_id, answers } = req.body;
 
+    console.log('🎯 [submitQuiz] Starting submission:', { userId, attempt_id, answersCount: answers?.length });
+
     // Validasi input
     if (!attempt_id || !answers || !Array.isArray(answers)) {
       await connection.rollback();
@@ -179,10 +184,13 @@ exports.submitQuiz = async (req, res, next) => {
     }
 
     // 1. Cek attempt exists dan milik user ini
-    const [attempts] = await connection.query(`
+    const [attemptsRows] = await connection.query(`
       SELECT * FROM quiz_attempt 
       WHERE id = ? AND user_id = ?
     `, [attempt_id, userId]);
+    const attempts = Array.isArray(attemptsRows) ? attemptsRows : [];
+
+    console.log('📊 [submitQuiz] Attempt found:', { exists: attempts.length > 0, status: attempts[0]?.status });
 
     if (attempts.length === 0) {
       await connection.rollback();
@@ -197,6 +205,7 @@ exports.submitQuiz = async (req, res, next) => {
     // 2. Cek status masih in_progress
     if (attempt.status !== 'in_progress') {
       await connection.rollback();
+      console.log('❌ [submitQuiz] Already submitted:', { attempt_id, current_status: attempt.status });
       return res.status(400).json({
         success: false,
         message: 'Quiz sudah di-submit sebelumnya'
@@ -415,10 +424,11 @@ function shuffleArrayWithSeed(array, seed) {
 // Cek apakah level sudah unlocked
 async function checkLevelUnlocked(userId, levelId) {
   // Cek prerequisite
-  const [prerequisites] = await db.query(`
+  const prereqResult = await db.query(`
     SELECT required_level_id FROM prerequisite_level
     WHERE level_id = ?
   `, [levelId]);
+  const prerequisites = Array.isArray(prereqResult) ? prereqResult : (Array.isArray(prereqResult[0]) ? prereqResult[0] : []);
 
   // Jika tidak ada prerequisite, level unlocked
   if (prerequisites.length === 0) {
@@ -427,11 +437,12 @@ async function checkLevelUnlocked(userId, levelId) {
 
   // Cek apakah semua prerequisite sudah completed
   for (let prereq of prerequisites) {
-    const [progress] = await db.query(`
+    const progressResult = await db.query(`
       SELECT status, best_percent_correct
       FROM user_level_progress
       WHERE user_id = ? AND level_id = ?
     `, [userId, prereq.required_level_id]);
+    const progress = Array.isArray(progressResult) ? progressResult : (Array.isArray(progressResult[0]) ? progressResult[0] : []);
 
     // Prerequisite belum di-attempt atau belum completed
     if (progress.length === 0 || progress[0].status !== 'completed') {
@@ -439,9 +450,10 @@ async function checkLevelUnlocked(userId, levelId) {
     }
 
     // Cek passing grade
-    const [level] = await db.query(`
+    const levelResult = await db.query(`
       SELECT pass_threshold FROM level WHERE id = ?
     `, [prereq.required_level_id]);
+    const level = Array.isArray(levelResult) ? levelResult : (Array.isArray(levelResult[0]) ? levelResult[0] : []);
 
     if (progress[0].best_percent_correct < level[0].pass_threshold) {
       return false;

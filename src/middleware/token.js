@@ -26,25 +26,29 @@ const authenticateTokenFromDB = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Method 1: Verify JWT first (optional, untuk double security)
-    try {
-      jwt.verify(token, process.env.JWT_SECRET);
-    } catch (jwtError) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token tidak valid atau telah kadaluarsa'
-      });
-    }
+    console.log(`🔍 Validating token from database:`, {
+      token_preview: token.substring(0, 20) + '...',
+      token_length: token.length,
+      is_jwt_format: token.includes('.')
+    });
 
-    // Method 2: Check token in database
+    // Check token in database (tidak perlu JWT verify karena database token bukan JWT!)
     const user = await AuthModel.findUserByToken(token);
     
     if (!user) {
+      console.log(`❌ Token not found in database or expired:`, {
+        token_preview: token.substring(0, 20) + '...'
+      });
       return res.status(401).json({
         success: false,
         message: 'Token tidak valid, telah kadaluarsa, atau user tidak aktif'
       });
     }
+    
+    console.log(`✅ Token validated successfully for user:`, {
+      users_id: user.users_id,
+      email: user.email
+    });
 
     // Parse notification_preferences jika ada
     if (user.notification_preferences && typeof user.notification_preferences === 'string') {

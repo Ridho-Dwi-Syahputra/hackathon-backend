@@ -93,7 +93,7 @@ try {
     // Mount routes
     app.use('/api/auth', authRoutes);
     app.use('/api/quiz', quizRoutes);
-    app.use('/api/category', categoryRoutes);
+    app.use('/api/categories', categoryRoutes); // ✅ PLURAL sesuai frontend
     app.use('/api/map', mapRoutes);
 
     // FUNGSIONAL 6: Mount scan endpoint terpisah
@@ -101,7 +101,9 @@ try {
 
     // Mount routes tambahan jika berhasil diimport
     if (badgeRoutes) app.use('/api/badge', badgeRoutes);
-    if (profileRoutes) app.use('/api/profile', profileRoutes);
+    // Profile routes dipasang di /api/auth (sama dengan authRoutes untuk konsistensi)
+    // Sudah termasuk notification preferences dari settingController
+    if (profileRoutes) app.use('/api/auth', profileRoutes);
     if (videoCollectionRoutes) app.use('/api/video-collections', videoCollectionRoutes);
     if (videoRoutes) app.use('/api/videos', videoRoutes);
 } catch (routeError) {

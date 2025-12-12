@@ -6,7 +6,13 @@
  */
 
 const { reviewMapModel } = require('../../models/modul-map/reviewMapModel');
-const { responseHelper } = require('../../utils/responseHelper');
+const { 
+    successResponse, 
+    errorResponse, 
+    unauthorizedResponse,
+    validationErrorResponse,
+    conflictResponse
+} = require('../../utils/responseHelper');
 const { writeLog, getIndonesianTime } = require('../../utils/logsGenerator');
 const { generateCustomId } = require('../../utils/customIdGenerator');
 const { sendReviewAddedNotification } = require('../firebase/notifikasi/modul-map/mapNotifikasiController');
@@ -43,9 +49,9 @@ const reviewMapController = {
 
             const reviews = await reviewMapModel.getPlaceReviews(touristPlaceId, userId, parseInt(page), parseInt(limit));
 
-            return responseHelper.success(res, 
-                'Review tempat wisata berhasil diambil', 
-                reviews
+            return successResponse(res, 
+                reviews,
+                'Review tempat wisata berhasil diambil'
             );
 
         } catch (error) {
@@ -58,7 +64,7 @@ const reviewMapController = {
                 }
             );
 
-            return responseHelper.error(res, 
+            return errorResponse(res, 
                 'Terjadi kesalahan saat mengambil review', 
                 500
             );
@@ -90,14 +96,14 @@ const reviewMapController = {
             
             const result = await reviewMapModel.toggleReviewLike(userId, reviewId, reviewLikeId);
 
-            return responseHelper.success(res, 
-                result.action === 'liked' ? 'Review berhasil disukai' : 'Like review berhasil dihapus', 
+            return successResponse(res, 
                 {
                     review_id: reviewId,
                     action: result.action,
                     total_likes: result.total_likes,
                     is_liked_by_me: result.action === 'liked'
-                }
+                },
+                result.action === 'liked' ? 'Review berhasil disukai' : 'Like review berhasil dihapus'
             );
 
         } catch (error) {
@@ -110,7 +116,7 @@ const reviewMapController = {
                 }
             );
 
-            return responseHelper.error(res, 
+            return errorResponse(res, 
                 error.message.includes('tidak ditemukan') ? 'Review tidak ditemukan' : 'Terjadi kesalahan saat memproses like', 
                 error.message.includes('tidak ditemukan') ? 404 : 500
             );
@@ -141,9 +147,13 @@ const reviewMapController = {
 
             const result = await reviewMapModel.updateReview(userId, reviewId, rating, review_text);
 
-            return responseHelper.success(res, 
-                'Review berhasil diperbarui', 
-                result
+            // Wrap result in proper format for frontend
+            return successResponse(res, 
+                {
+                    review: result,
+                    tourist_place: null  // Optional, bisa ditambahkan nanti jika perlu
+                },
+                'Review berhasil diperbarui'
             );
 
         } catch (error) {
@@ -156,7 +166,7 @@ const reviewMapController = {
                 }
             );
 
-            return responseHelper.error(res, 
+            return errorResponse(res, 
                 error.message.includes('tidak ditemukan') ? 'Review tidak ditemukan atau Anda tidak memiliki akses' : 'Terjadi kesalahan saat memperbarui review', 
                 error.message.includes('tidak ditemukan') ? 404 : 500
             );
@@ -184,7 +194,7 @@ const reviewMapController = {
 
             await reviewMapModel.deleteReview(userId, reviewId);
 
-            return responseHelper.success(res, 
+            return successResponse(res, 
                 'Review berhasil dihapus', 
                 { review_id: reviewId }
             );
@@ -199,7 +209,7 @@ const reviewMapController = {
                 }
             );
 
-            return responseHelper.error(res, 
+            return errorResponse(res, 
                 error.message.includes('tidak ditemukan') ? 'Review tidak ditemukan atau Anda tidak memiliki akses' : 'Terjadi kesalahan saat menghapus review', 
                 error.message.includes('tidak ditemukan') ? 404 : 500
             );
@@ -244,11 +254,11 @@ const reviewMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 401, 'UNAUTHORIZED');
+                return errorResponse(res, errorMsg, 401, 'UNAUTHORIZED');
             }
 
             // Validasi parameter wajib
-            if (!tourist_place_id || isNaN(tourist_place_id)) {
+            if (!tourist_place_id || typeof tourist_place_id !== 'string' || tourist_place_id.trim().length === 0) {
                 const errorMsg = 'ID tempat wisata tidak valid';
                 
                 logReview('map/errors', 'ERROR', errorMsg, {
@@ -260,7 +270,7 @@ const reviewMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
+                return errorResponse(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
             if (!rating || rating < 1 || rating > 5) {
@@ -276,7 +286,7 @@ const reviewMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
+                return errorResponse(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
             if (!review_text || review_text.trim().length === 0) {
@@ -291,7 +301,7 @@ const reviewMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
+                return errorResponse(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
             // Validasi panjang review text (maksimal 500 karakter)
@@ -308,11 +318,11 @@ const reviewMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 400, 'VALIDATION_ERROR');
+                return errorResponse(res, errorMsg, 400, 'VALIDATION_ERROR');
             }
 
             // Cek apakah user sudah pernah review tempat ini
-            const existingReview = await reviewMapModel.checkExistingReview(userId, parseInt(tourist_place_id));
+            const existingReview = await reviewMapModel.checkExistingReview(userId, tourist_place_id);
             if (existingReview) {
                 const errorMsg = 'Anda sudah memberikan review untuk tempat ini';
                 
@@ -325,7 +335,7 @@ const reviewMapController = {
                     timestamp_indo: getIndonesianTime()
                 });
 
-                return responseHelper.error(res, errorMsg, 409, 'DUPLICATE_REVIEW');
+                return errorResponse(res, errorMsg, 409, 'DUPLICATE_REVIEW');
             }
 
             // Generate custom ID untuk review (format: RV001, RV002, ...)
@@ -344,7 +354,7 @@ const reviewMapController = {
 
             // Kirim notifikasi FCM ke user
             try {
-                await sendReviewAddedNotification(userId, parseInt(tourist_place_id), parseInt(rating));
+                await sendReviewAddedNotification(userId, tourist_place_id, parseInt(rating));
                 
                 logReview('map/review', 'INFO', 
                     `Notifikasi review berhasil dikirim`, {
@@ -388,16 +398,18 @@ const reviewMapController = {
                 }
             );
 
-            // Return response sesuai database tanpa modifikasi
-            return responseHelper.success(res, 
-                'Review berhasil ditambahkan', 
+            // Return response dengan tourist_place data untuk frontend
+            return successResponse(res, 
                 {
                     review: newReview,
-                    place_stats: {
-                        total_reviews: newReview.total_reviews,
-                        average_rating: parseFloat(newReview.average_rating).toFixed(1)
+                    tourist_place: {
+                        tourist_place_id: newReview.tourist_place_id,
+                        name: newReview.place_name,
+                        average_rating: parseFloat(newReview.average_rating),
+                        total_reviews: newReview.total_reviews
                     }
-                }
+                },
+                'Review berhasil ditambahkan'
             );
 
         } catch (error) {
@@ -417,7 +429,7 @@ const reviewMapController = {
                 }
             );
 
-            return responseHelper.error(res, 
+            return errorResponse(res, 
                 'Terjadi kesalahan saat menambahkan review', 
                 500, 
                 'INTERNAL_SERVER_ERROR'
@@ -427,3 +439,4 @@ const reviewMapController = {
 };
 
 module.exports = { reviewMapController };
+
