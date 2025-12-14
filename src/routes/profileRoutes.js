@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/modul-profile/profileController');
+const changeProfileController = require('../controllers/modul-profile/changeProfileController');
 const settingController = require('../controllers/modul-profile/settingController');
 const authMiddleware = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -39,7 +40,7 @@ router.get('/profile', profileController.getProfile);
  * @access  Private
  * @body    { full_name, email }
  */
-router.put('/profile', profileController.updateProfile);
+router.put('/profile', changeProfileController.updateProfile);
 
 /**
  * @route   PUT /auth/profile/image
@@ -51,7 +52,7 @@ router.put('/profile/image', (req, res, next) => {
     // Set upload type for middleware
     req.uploadType = 'profiles';
     next();
-}, upload.single('image'), profileController.updateProfileImage);
+}, upload.single('image'), changeProfileController.updateProfileImage);
 
 /**
  * @route   PUT /auth/password
@@ -59,7 +60,7 @@ router.put('/profile/image', (req, res, next) => {
  * @access  Private
  * @body    { current_password, new_password }
  */
-router.put('/password', profileController.changePassword);
+router.put('/password', changeProfileController.changePassword);
 
 /**
  * @route   PUT /auth/notification-preferences

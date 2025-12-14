@@ -90,6 +90,13 @@ try {
         console.warn('⚠️ videoCollectionRoutes not found or has error:', e.message);
     }
 
+    let homeRoutes;
+    try {
+        homeRoutes = require('./routes/homeRoutes');
+    } catch (e) {
+        console.warn('⚠️ homeRoutes not found or has error:', e.message);
+    }
+
     // Mount routes
     app.use('/api/auth', authRoutes);
     app.use('/api/quiz', quizRoutes);
@@ -106,6 +113,7 @@ try {
     if (profileRoutes) app.use('/api/auth', profileRoutes);
     if (videoCollectionRoutes) app.use('/api/video-collections', videoCollectionRoutes);
     if (videoRoutes) app.use('/api/videos', videoRoutes);
+    if (homeRoutes) app.use('/api/home', homeRoutes);
 } catch (routeError) {
     console.warn('⚠️ Warning: Some routes failed to load:', routeError.message);
 }

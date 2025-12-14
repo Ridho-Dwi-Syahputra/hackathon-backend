@@ -103,4 +103,6 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
+// Export dengan nama verifyToken untuk compatibility dengan homeRoutes
 module.exports = authMiddleware;
+module.exports.verifyToken = authMiddleware;
