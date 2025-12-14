@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 11, 2025 at 05:42 AM
+-- Generation Time: Dec 13, 2025 at 07:20 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -39,6 +39,32 @@ CREATE TABLE `attempt_answer` (
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `attempt_answer`
+--
+
+INSERT INTO `attempt_answer` (`id`, `attempt_id`, `question_id`, `option_id`, `is_correct`, `answered_at`, `order_index`, `created_at`, `updated_at`) VALUES
+('02010646-9431-4d73-937a-24a79817db15', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-009', 'opt-034', 1, '2025-12-11 05:11:14', 5, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('0257e92e-434f-4d41-a59b-9dc2415762f9', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-008', 'opt-030', 0, '2025-12-11 05:11:14', 3, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('19527979-cb6f-4db4-9b3c-339d93fe95f0', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-009', 'opt-035', 0, '2025-12-11 05:16:50', 8, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('1c95a8c8-8f4a-4d3f-9507-bb60d1993e18', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-007', 'opt-026', 1, '2025-12-11 05:16:50', 1, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('2bf1eafb-7fd1-4706-a380-b6dd8585aeaf', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-002', 'opt-005', 0, '2025-12-11 05:11:14', 0, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('337e65df-9c48-417c-953b-1b491859eb76', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-006', 'opt-022', 0, '2025-12-11 05:11:14', 9, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('49cd6688-776b-4e08-b86a-79c13a5c8f7d', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-008', 'opt-030', 0, '2025-12-11 05:16:50', 4, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('517d0a3b-1c60-4a9e-8ce7-00aff98b9631', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-003', 'opt-010', 0, '2025-12-11 05:11:14', 1, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('65abce2e-8ae5-464f-b9c8-c35c58ceeeb1', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-005', 'opt-018', 1, '2025-12-11 05:16:50', 9, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('7add613d-c55c-4eb8-a65a-fef3f204c7c2', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-006', 'opt-021', 1, '2025-12-11 05:16:50', 7, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('7ebef7e9-bf41-43da-bbb8-f8015a517530', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-002', 'opt-005', 0, '2025-12-11 05:16:50', 0, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('8a807726-889f-4c0d-a5ac-80f5e980b6de', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-001', 'opt-001', 1, '2025-12-11 05:16:50', 5, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('aceb5616-e32c-4c98-9841-e7fa711585d1', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-005', 'opt-017', 0, '2025-12-11 05:11:14', 2, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('b5e05ee7-6cd9-44ca-8d5f-ecaf0ca606a5', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-003', 'opt-011', 1, '2025-12-11 05:16:50', 2, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('c2d4cc40-a630-430b-a546-f720a1c9194d', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-001', 'opt-003', 0, '2025-12-11 05:11:14', 4, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('c34f9dcf-27b9-468a-a39d-f51b16b54932', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-010', 'opt-037', 1, '2025-12-11 05:16:50', 6, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('c7bdcaa6-d034-40bb-9436-f52ae63856b9', '451cefcb-b6f5-4144-93b7-b79a9130a760', 'q-004', 'opt-013', 0, '2025-12-11 05:16:50', 3, '2025-12-11 05:16:51', '2025-12-11 05:16:51'),
+('d9596e86-6a61-44d8-a97b-501b4f75431c', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-007', 'opt-026', 1, '2025-12-11 05:11:14', 6, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('dbd3e51b-29c2-49a5-9ed6-3e6ffd157d68', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-010', 'opt-038', 0, '2025-12-11 05:11:14', 7, '2025-12-11 05:11:16', '2025-12-11 05:11:16'),
+('f805036a-0765-4d93-b82d-0c86b0ca4833', '6b313113-c747-4a68-acce-1da171d56a3f', 'q-004', 'opt-013', 0, '2025-12-11 05:11:14', 8, '2025-12-11 05:11:16', '2025-12-11 05:11:16');
+
 -- --------------------------------------------------------
 
 --
@@ -71,6 +97,46 @@ INSERT INTO `badge` (`id`, `name`, `description`, `image_url`, `criteria_type`, 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `collection_video`
+--
+
+CREATE TABLE `collection_video` (
+  `id` char(36) NOT NULL,
+  `id_collection` char(36) NOT NULL,
+  `id_video` char(36) NOT NULL,
+  `tanggal_ditambah` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `collection_video`
+--
+
+INSERT INTO `collection_video` (`id`, `id_collection`, `id_video`, `tanggal_ditambah`) VALUES
+('6d6f3823-8b9b-4488-96fd-d206512ce913', 'daccd093-6306-4384-8050-b64e5830c38a', 'b12de690-d71c-11f0-9e0d-55795f701413', '2025-12-12 05:53:44');
+
+--
+-- Triggers `collection_video`
+--
+DELIMITER $$
+CREATE TRIGGER `after_collection_video_delete` AFTER DELETE ON `collection_video` FOR EACH ROW BEGIN
+  UPDATE `video_collection` 
+  SET `jumlah_video` = GREATEST(`jumlah_video` - 1, 0)
+  WHERE `id` = OLD.`id_collection`;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `after_collection_video_insert` AFTER INSERT ON `collection_video` FOR EACH ROW BEGIN
+  UPDATE `video_collection` 
+  SET `jumlah_video` = `jumlah_video` + 1 
+  WHERE `id` = NEW.`id_collection`;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `favorit_video`
 --
 
@@ -80,6 +146,13 @@ CREATE TABLE `favorit_video` (
   `id_video` char(36) NOT NULL,
   `tanggal_ditambah` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `favorit_video`
+--
+
+INSERT INTO `favorit_video` (`id`, `id_user`, `id_video`, `tanggal_ditambah`) VALUES
+('b3e5bcf0-a399-4640-843d-467d7c2deed9', 'U586', 'b12de690-d71c-11f0-9e0d-55795f701413', '2025-12-12 05:52:59');
 
 -- --------------------------------------------------------
 
@@ -372,6 +445,16 @@ CREATE TABLE `quiz_attempt` (
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `quiz_attempt`
+--
+
+INSERT INTO `quiz_attempt` (`id`, `user_id`, `level_id`, `started_at`, `finished_at`, `duration_seconds`, `seed`, `total_questions`, `status`, `score_points`, `correct_count`, `wrong_count`, `unanswered_count`, `percent_correct`, `metadata_snapshot`, `created_at`, `updated_at`) VALUES
+('02125eff-289d-49a4-b1a3-c8ceb64ef684', 'U979', 'level-004', '2025-12-11 05:05:06', NULL, 300, 231063, 5, 'in_progress', 0, 0, 0, 0, 0.00, NULL, '2025-12-11 05:05:06', '2025-12-11 05:05:06'),
+('42378ca1-ebe6-483e-a7a7-10c581db3917', 'U979', 'level-004', '2025-12-11 04:59:41', NULL, 300, 745267, 5, 'in_progress', 0, 0, 0, 0, 0.00, NULL, '2025-12-11 04:59:41', '2025-12-11 04:59:41'),
+('451cefcb-b6f5-4144-93b7-b79a9130a760', 'U979', 'level-001', '2025-12-11 05:16:33', '2025-12-11 05:16:51', 300, 805946, 10, 'submitted', 60, 6, 4, 0, 60.00, NULL, '2025-12-11 05:16:33', '2025-12-11 05:16:51'),
+('6b313113-c747-4a68-acce-1da171d56a3f', 'U979', 'level-001', '2025-12-11 05:07:40', '2025-12-11 05:11:16', 300, 308129, 10, 'submitted', 20, 2, 8, 0, 20.00, NULL, '2025-12-11 05:07:40', '2025-12-11 05:11:16');
+
 -- --------------------------------------------------------
 
 --
@@ -420,7 +503,9 @@ CREATE TABLE `review` (
 --
 
 INSERT INTO `review` (`review_id`, `user_id`, `tourist_place_id`, `rating`, `review_text`, `created_at`, `updated_at`, `total_likes`) VALUES
-('RV738', 'U979', 'TP001', 3, 'baguss, kerenn', '2025-12-10 17:07:21', '2025-12-10 17:07:44', 0);
+('RV289', 'U403', 'TP001', 3, 'bagus bagus', '2025-12-13 17:53:24', '2025-12-13 17:53:24', 0),
+('RV417', 'U893', 'TP001', 5, 'baguss bangett', '2025-12-11 19:15:09', '2025-12-11 19:25:21', 1),
+('RV738', 'U979', 'TP001', 3, 'baguss, kerenn', '2025-12-10 17:07:21', '2025-12-13 09:17:33', 2);
 
 --
 -- Triggers `review`
@@ -470,18 +555,31 @@ CREATE TABLE `review_like` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `review_like`
+--
+
+INSERT INTO `review_like` (`review_like_id`, `user_id`, `review_id`, `created_at`) VALUES
+('RL333', 'U403', 'RV738', '2025-12-13 09:17:33'),
+('RL457', 'U893', 'RV738', '2025-12-11 19:13:33'),
+('RL913', 'U403', 'RV417', '2025-12-11 19:25:21');
+
+--
 -- Triggers `review_like`
 --
 DELIMITER $$
 CREATE TRIGGER `after_review_like_delete` AFTER DELETE ON `review_like` FOR EACH ROW BEGIN
-    UPDATE `review` SET total_likes = total_likes - 1 WHERE review_id = OLD.review_id;
+    UPDATE `review` 
+    SET total_likes = GREATEST(total_likes - 1, 0) 
+    WHERE review_id = OLD.review_id;
 END
 $$
 DELIMITER ;
 DELIMITER $$
-CREATE TRIGGER `after_review_like_insert` AFTER INSERT ON `review_like` FOR EACH ROW UPDATE review
-SET total_likes = total_likes + 1
-WHERE id = NEW.review_id
+CREATE TRIGGER `after_review_like_insert` AFTER INSERT ON `review_like` FOR EACH ROW BEGIN
+    UPDATE `review`
+    SET total_likes = total_likes + 1
+    WHERE review_id = NEW.review_id;
+END
 $$
 DELIMITER ;
 
@@ -496,6 +594,8 @@ CREATE TABLE `tourist_place` (
   `name` varchar(150) NOT NULL,
   `description` text DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL COMMENT 'Koordinat Lintang',
+  `longitude` decimal(11,8) DEFAULT NULL COMMENT 'Koordinat Bujur',
   `image_url` varchar(512) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
@@ -507,11 +607,11 @@ CREATE TABLE `tourist_place` (
 -- Dumping data for table `tourist_place`
 --
 
-INSERT INTO `tourist_place` (`tourist_place_id`, `name`, `description`, `address`, `image_url`, `is_active`, `created_at`, `updated_at`, `average_rating`) VALUES
-('TP001', 'Jam Gadang', 'Jam Gadang adalah ikon pariwisata Kota Bukittinggi yang menjulang setinggi 26 meter di jantung kota. Menara jam ini memiliki keunikan pada angka empat romawi yang ditulis IIII dan atap bagonjong yang mencerminkan arsitektur Minangkabau. Dibangun pada masa kolonial Belanda, tempat ini menawarkan pemandangan kota yang indah dan udara sejuk khas perbukitan.', 'Jl. Raya Bukittinggi - Payakumbuh, Benteng Ps. Atas, Bukittinggi', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP001-jam-gadang.jpg', 1, '2025-11-29 15:16:28', '2025-12-10 17:07:21', 3.0),
-('TP002', 'Museum Gudang Ransum', 'Terletak di Sawahlunto, museum ini merupakan bekas dapur umum yang dibangun pada tahun 1918 untuk pekerja tambang batubara. Koleksinya meliputi periuk dan kuali raksasa yang menjadi saksi bisu sejarah pertambangan \"Orang Rantai\" di era kolonial. Wisatawan dapat mempelajari sejarah kuliner massal dan teknologi uap yang digunakan pada masa lampau.', 'Jl. Abdul Rahman Hakim, Air Dingin, Sawahlunto', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP002-museum-gudang-ransum.jpg', 1, '2025-11-29 15:16:28', '2025-11-30 03:46:57', 0.0),
-('TP003', 'Pantai Air Manis', 'Pantai ini terkenal di seluruh nusantara sebagai lokasi legenda Malin Kundang si anak durhaka. Pengunjung dapat melihat formasi batu yang menyerupai pecahan kapal dan sosok manusia yang sedang bersujud memohon ampun di tepi pantai. Selain wisata sejarah, pantai ini menawarkan pasir cokelat yang luas dan pemandangan Gunung Padang yang memukau.', 'Jl. Malin Kundang, Air Manis, Padang Selatan, Kota Padang', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP003-pantai-air-manis.jpg', 1, '2025-11-29 15:16:28', '2025-11-30 03:47:27', 0.0),
-('TP004', 'Pantai Carocok', 'Primadona wisata di Painan, Pesisir Selatan ini menawarkan keindahan air laut yang jernih dan jembatan apung yang ikonik. Terhubung dengan Pulau Batu Kereta, kawasan ini menjadi spot favorit untuk menikmati matahari terbenam dan bermain wahana air. Suasana pantai yang tenang menjadikannya lokasi yang sempurna untuk rekreasi keluarga.', 'Jl. Pantai Carocok, Painan, Pesisir Selatan', 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP004-pantai-carocok.jpeg', 1, '2025-11-29 15:16:28', '2025-11-30 03:47:50', 0.0);
+INSERT INTO `tourist_place` (`tourist_place_id`, `name`, `description`, `address`, `latitude`, `longitude`, `image_url`, `is_active`, `created_at`, `updated_at`, `average_rating`) VALUES
+('TP001', 'Jam Gadang', 'Jam Gadang adalah ikon pariwisata Kota Bukittinggi yang menjulang setinggi 26 meter di jantung kota. Menara jam ini memiliki keunikan pada angka empat romawi yang ditulis IIII dan atap bagonjong yang mencerminkan arsitektur Minangkabau. Dibangun pada masa kolonial Belanda, tempat ini menawarkan pemandangan kota yang indah dan udara sejuk khas perbukitan.', 'Jl. Raya Bukittinggi - Payakumbuh, Benteng Ps. Atas, Bukittinggi', -0.93262503, 100.42720410, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP001-jam-gadang.jpg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:08', 3.7),
+('TP002', 'Museum Gudang Ransum', 'Terletak di Sawahlunto, museum ini merupakan bekas dapur umum yang dibangun pada tahun 1918 untuk pekerja tambang batubara. Koleksinya meliputi periuk dan kuali raksasa yang menjadi saksi bisu sejarah pertambangan \"Orang Rantai\" di era kolonial. Wisatawan dapat mempelajari sejarah kuliner massal dan teknologi uap yang digunakan pada masa lampau.', 'Jl. Abdul Rahman Hakim, Air Dingin, Sawahlunto', -0.66985000, 100.76891000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP002-museum-gudang-ransum.jpg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:38', 0.0),
+('TP003', 'Pantai Air Manis', 'Pantai ini terkenal di seluruh nusantara sebagai lokasi legenda Malin Kundang si anak durhaka. Pengunjung dapat melihat formasi batu yang menyerupai pecahan kapal dan sosok manusia yang sedang bersujud memohon ampun di tepi pantai. Selain wisata sejarah, pantai ini menawarkan pasir cokelat yang luas dan pemandangan Gunung Padang yang memukau.', 'Jl. Malin Kundang, Air Manis, Padang Selatan, Kota Padang', -0.99871000, 100.36370000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP003-pantai-air-manis.jpg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:38', 0.0),
+('TP004', 'Pantai Carocok', 'Primadona wisata di Painan, Pesisir Selatan ini menawarkan keindahan air laut yang jernih dan jembatan apung yang ikonik. Terhubung dengan Pulau Batu Kereta, kawasan ini menjadi spot favorit untuk menikmati matahari terbenam dan bermain wahana air. Suasana pantai yang tenang menjadikannya lokasi yang sempurna untuk rekreasi keluarga.', 'Jl. Pantai Carocok, Painan, Pesisir Selatan', -1.34539000, 100.58867000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP004-pantai-carocok.jpeg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:38', 0.0);
 
 --
 -- Triggers `tourist_place`
@@ -555,12 +655,13 @@ INSERT INTO `users` (`users_id`, `full_name`, `email`, `password_hash`, `total_x
 ('U080', 'Ridhoooo123aa', 'ridho123@gmail.com', '$2b$10$ythHm9TW77j3cO0P2AfI0en/vzDxAkqe6XQrIMYN4Pnrw/V0olqrG', 0, 'active', NULL, '2025-12-10 10:24:56', '2025-12-10 10:25:29', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlUwODAiLCJlbWFpbCI6InJpZGhvMTIzQGdtYWlsLmNvbSIsImlhdCI6MTc2NTM2MjMyOSwiZXhwIjoxNzY3OTU0MzI5fQ.g1P9o_GQQjYNwwAwWUzI6HzCRLRV3bVqRfK4wnpsbrk', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:25:29'),
 ('U094', 'Ridhooo', 'testt@gmail.com', '$2b$10$01lRbCO08my6K1uSQeTDU.T8ekE5fmTy0ZIxH/3qsAcZAoqfilOMW', 0, 'active', NULL, '2025-12-10 10:05:38', '2025-12-10 10:06:13', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlUwOTQiLCJlbWFpbCI6InRlc3R0QGdtYWlsLmNvbSIsImlhdCI6MTc2NTM2MTE3MywiZXhwIjoxNzY3OTUzMTczfQ.GSZijqjCRsirbWNbJVYiTh3hx6gRHcwUrC8KKf7JIbg', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:06:13'),
 ('U320', 'ochaa', 'raisyaa@gmail.com', '$2b$10$tmy//VrbXyYeiCjRHW3xDenyCb0yLfUqTopEDQDOrnrm61h1Eu2yC', 0, 'active', NULL, '2025-12-10 14:44:04', '2025-12-10 14:44:53', 'T1765377893086-U320', 'd2qiDZt8QDeLvE3UMSvi98:APA91bGPM04IEtx3Xp5doMdUVMnQ_6-Vq0H-0MYIQSKZ5VgmJWE1yxQFKHgHVckH8HfaoIdVI-HsnW2VaZSPp9fr3FsM-JGJf8TqwKci2l45DAKLkBivy08', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 21:44:53'),
-('U403', 'Ridho Dwi Syahputra', 'ridhooo1@example.com', '$2b$10$oyTs20zxImh4UHTMB7xgBOmcMkKLdudQHni5JWvcQBnheh0vKntYm', 0, 'active', NULL, '2025-12-05 06:22:21', '2025-12-05 13:55:15', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlU0MDMiLCJlbWFpbCI6InJpZGhvb28xQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY0OTQyOTE1LCJleHAiOjE3Njc1MzQ5MTV9.oQ3P1a3GGPT9bZ4Ighriir_PDMKQetf_b8DVCtmqUuQ', 'fYItkDNzTba0eimnjGpYc9:APA91bHNsAl8oVU1l1Kfb1q0ejsD5U4TdRdt6RSB5nCze5Ksp2frwotPOn-UTIfwFD5HPSTAfC-tRX-Y6ppTugGHlsIcE2e4d6oTZBatiD5_WAomgPDTZys', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-04 20:55:15'),
+('U403', 'Ridho Dwi Syahputra', 'ridhooo1@example.com', '$2b$10$oyTs20zxImh4UHTMB7xgBOmcMkKLdudQHni5JWvcQBnheh0vKntYm', 50, 'active', NULL, '2025-12-05 06:22:21', '2025-12-13 17:08:13', 'T1765481079369-U403', 'eXFnc96JT1O5n3U4F9VWyu:APA91bEh71TM_ML4qICTnpnxAh3ugHZeXnShpGWCXC1ij6xt4r4LDsZWxozalv3o0FH_ZRYOcJIt9i1jl2IO-6DKCOci_9WnwNLN6kDzQN7cDs87bzqEZjg', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-11 02:24:39'),
+('U586', 'Dev Sako', 'sako@dev.com', '$2b$10$lg4o3qPduBra7DpjMzwcfeUo/MCncVPw1u8I0ioAAdiVn8WvdPf92', 0, 'active', NULL, '2025-12-12 05:52:09', '2025-12-12 05:56:15', 'T1765518738108-U586', 'eUHF4dshRAeVLPvC4H7ubH:APA91bFITiULngRTDhCLhBap2EbK_WbhBC3pATOyA3drlgRAtSyepDgMtWvblXJJs33rYnWD5OWd7i40n_WnNqpsSXv4jdvRGO9HV9k0Mv7jtmmWCb2mgm0', '{\"map_notifications\":{\"place_visited\":true,\"review_added\":true},\"marketing\":false,\"quiz_notifications\":true,\"system_announcements\":true,\"video_notifications\":true}', '2026-01-11 12:52:18'),
 ('U621', 'Ridhoooooooooooo', 'testing123455@gmail.com', '$2b$10$yWn/MZhT035NgrRnAh2W5O6190cCcZclLdfccxWbcpB2PQ05zVBDm', 0, 'active', NULL, '2025-12-10 10:31:03', '2025-12-10 10:38:53', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlU2MjEiLCJpYXQiOjE3NjUzNjMxMzMsImV4cCI6MTc2NTM2NjczM30.gKDfte-Q3AzUQBjZBDM8-o8RFmnZlGwvYwNGKU2CwK4', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:38:53'),
-('U662', 'Ridho Dwi Syahputra', 'ridhooo@example.com', '$2b$10$Hl62xlT5R2Ws.Dxd/bnXNea5W6S1g9nv0I3hVZugQvTZxAhUiWg/u', 0, 'active', NULL, '2025-12-05 06:18:49', '2025-12-05 06:18:49', NULL, 'fYItkDNzTba0eimnjGpYc9:APA91bHNsAl8oVU1l1Kfb1q0ejsD5U4TdRdt6RSB5nCze5Ksp2frwotPOn-UTIfwFD5HPSTAfC-tRX-Y6ppTugGHlsIcE2e4d6oTZBatiD5_WAomgPDTZys', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2025-12-05 13:18:49'),
+('U662', 'Ridho Dwi Syahputra', 'ridhooo@example.com', '$2b$10$Hl62xlT5R2Ws.Dxd/bnXNea5W6S1g9nv0I3hVZugQvTZxAhUiWg/u', 50, 'active', NULL, '2025-12-05 06:18:49', '2025-12-13 17:12:13', NULL, 'fYItkDNzTba0eimnjGpYc9:APA91bHNsAl8oVU1l1Kfb1q0ejsD5U4TdRdt6RSB5nCze5Ksp2frwotPOn-UTIfwFD5HPSTAfC-tRX-Y6ppTugGHlsIcE2e4d6oTZBatiD5_WAomgPDTZys', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2025-12-05 13:18:49'),
 ('U666', 'Raisyaaa', 'akuncontoh@gmail.com', '$2b$10$4izkKrJ606W1lNf3viNlHupX0BWxQvKziGn6bRpIPn6wf9ixYBkBu', 0, 'active', NULL, '2025-12-10 14:59:57', '2025-12-10 15:00:37', 'T1765378837550-U666', 'cEBzBETySMG4KZZWjPzOh0:APA91bGU6mTh_kygMMtM2EWz2riqYnyFkFrpsMkTUtryIhZu5TqCHrW7FwGhv_sPqO7BDVKblzW7Y7vDJXBf0neeZPjgQimMUinVwUPAUPj4n8UNRMMbQ_E', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 22:00:37'),
-('U893', 'Ridho Dwiii', 'test123@gmail.com', '$2b$10$pcb1hjtxv9DHoCFqTcARceDZR9h1a4k9BUrpaBTNbMrbzb0SHUpIi', 0, 'active', NULL, '2025-12-10 10:16:42', '2025-12-10 10:18:39', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlU4OTMiLCJlbWFpbCI6InRlc3QxMjNAZ21haWwuY29tIiwiaWF0IjoxNzY1MzYxOTE5LCJleHAiOjE3Njc5NTM5MTl9.IMJ0UMVuYh9LVk6-LmEfE7YTfrMPs7Wqgz1kBgMtJDc', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:18:39'),
-('U979', 'OCHAAA', '1234@gmail.com', '$2b$10$cMmwKuxfsijv3SlXk8U9T.izLKr3lgWNSxmoYuqxlv6nbmNA4Rs.C', 0, 'active', NULL, '2025-12-10 15:11:29', '2025-12-10 15:12:27', 'T1765379547579-U979', 'eXFnc96JT1O5n3U4F9VWyu:APA91bEh71TM_ML4qICTnpnxAh3ugHZeXnShpGWCXC1ij6xt4r4LDsZWxozalv3o0FH_ZRYOcJIt9i1jl2IO-6DKCOci_9WnwNLN6kDzQN7cDs87bzqEZjg', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 22:12:27');
+('U893', 'Ridho Dwiii', 'test123@gmail.com', '$2b$10$pcb1hjtxv9DHoCFqTcARceDZR9h1a4k9BUrpaBTNbMrbzb0SHUpIi', 0, 'active', NULL, '2025-12-10 10:16:42', '2025-12-11 19:24:27', NULL, NULL, '{\"map_notifications\":{\"place_visited\":true,\"review_added\":true},\"marketing\":false,\"quiz_notifications\":true,\"system_announcements\":true,\"video_notifications\":true}', NULL),
+('U979', 'OCHAAA', '1234@gmail.com', '$2b$10$cMmwKuxfsijv3SlXk8U9T.izLKr3lgWNSxmoYuqxlv6nbmNA4Rs.C', 0, 'active', NULL, '2025-12-10 15:11:29', '2025-12-11 18:54:32', NULL, NULL, '{\"map_notifications\":{\"place_visited\":true,\"review_added\":true},\"marketing\":false,\"quiz_notifications\":true,\"system_announcements\":true,\"video_notifications\":true}', NULL);
 
 --
 -- Triggers `users`
@@ -625,6 +726,14 @@ CREATE TABLE `user_level_progress` (
   `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `user_level_progress`
+--
+
+INSERT INTO `user_level_progress` (`user_id`, `level_id`, `best_percent_correct`, `best_score_points`, `total_attempts`, `status`, `last_attempt_id`, `last_updated_at`, `created_at`) VALUES
+('U979', 'level-001', 60.00, 60, 2, 'in_progress', '451cefcb-b6f5-4144-93b7-b79a9130a760', '2025-12-11 05:16:51', '2025-12-11 05:07:40'),
+('U979', 'level-004', 0.00, 0, 2, 'in_progress', NULL, '2025-12-11 05:05:06', '2025-12-11 04:59:41');
+
 -- --------------------------------------------------------
 
 --
@@ -684,6 +793,10 @@ INSERT INTO `user_visit` (`user_visit_id`, `user_id`, `tourist_place_id`, `statu
 ('acb2e88e-d5d6-11f0-a028-e8fb1ca180ac', 'U320', 'TP002', 'not_visited', NULL, '2025-12-10 14:44:04', '2025-12-10 14:44:04'),
 ('acb2eb96-d5d6-11f0-a028-e8fb1ca180ac', 'U320', 'TP003', 'not_visited', NULL, '2025-12-10 14:44:04', '2025-12-10 14:44:04'),
 ('acb2ed4b-d5d6-11f0-a028-e8fb1ca180ac', 'U320', 'TP004', 'not_visited', NULL, '2025-12-10 14:44:04', '2025-12-10 14:44:04'),
+('b2d7201b-d71e-11f0-9e0d-55795f701413', 'U586', 'TP001', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
+('b2d7aab9-d71e-11f0-9e0d-55795f701413', 'U586', 'TP002', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
+('b2d7ab7e-d71e-11f0-9e0d-55795f701413', 'U586', 'TP003', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
+('b2d7abec-d71e-11f0-9e0d-55795f701413', 'U586', 'TP004', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
 ('c1d98262-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP001', 'not_visited', NULL, '2025-12-05 06:22:21', '2025-12-05 06:22:21'),
 ('c1d984dc-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP002', 'visited', NULL, '2025-12-05 06:22:21', '2025-12-05 09:13:02'),
 ('c1d98600-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP003', 'not_visited', NULL, '2025-12-05 06:22:21', '2025-12-05 06:22:21'),
@@ -716,6 +829,40 @@ CREATE TABLE `video` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `video`
+--
+
+INSERT INTO `video` (`id`, `judul`, `kategori`, `youtube_url`, `thumbnail_url`, `deskripsi`, `is_active`, `created_at`, `updated_at`) VALUES
+('678538ca-d71c-11f0-9e0d-55795f701413', 'Pariwisata Minangkabau', 'Wisata', 'https://youtu.be/eBz5bQ9j2o8?si=L48KfKtRisH9LC14', NULL, 'Video dari DinPar Prov Sumatera Barat', 1, '2025-12-12 05:35:44', '2025-12-12 05:35:44'),
+('845748f9-d71c-11f0-9e0d-55795f701413', 'Pesona Sumatera Barat', 'Kesenian', 'https://youtu.be/QppWT8UpR0A?si=HX-Q1YsYgq4I4ln6', NULL, 'Video dari Kementrian Pariwisata', 1, '2025-12-12 05:36:32', '2025-12-12 05:36:32'),
+('9cfc73d6-d71c-11f0-9e0d-55795f701413', 'Desa Wisata SUMBAR', 'Wisata', 'https://youtu.be/ejnH-LTKBEE?si=sSXD22wTDpH5JnQH', NULL, 'Video dari NatGeo', 1, '2025-12-12 05:37:14', '2025-12-12 05:37:14'),
+('b12de690-d71c-11f0-9e0d-55795f701413', 'Kuliner Rendang Minang', 'Kuliner', 'https://youtu.be/idKkTKhZn7c?si=rnU1lEiLFUXmtIT3', NULL, '-', 1, '2025-12-12 05:37:48', '2025-12-12 05:37:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `video_collection`
+--
+
+CREATE TABLE `video_collection` (
+  `id` char(36) NOT NULL,
+  `id_user` char(36) NOT NULL,
+  `nama_koleksi` varchar(100) NOT NULL,
+  `deskripsi` text DEFAULT NULL,
+  `thumbnail_url` varchar(255) DEFAULT NULL COMMENT 'Optional: URL to collection cover image',
+  `jumlah_video` int(11) DEFAULT 0 COMMENT 'Cached count of videos in collection',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `video_collection`
+--
+
+INSERT INTO `video_collection` (`id`, `id_user`, `nama_koleksi`, `deskripsi`, `thumbnail_url`, `jumlah_video`, `created_at`, `updated_at`) VALUES
+('daccd093-6306-4384-8050-b64e5830c38a', 'U586', 'Kota Padang', 'Tentang Segala Kebudayaan Kota Padang', NULL, 1, '2025-12-12 05:53:42', '2025-12-12 05:53:44');
+
+--
 -- Indexes for dumped tables
 --
 
@@ -733,6 +880,15 @@ ALTER TABLE `attempt_answer`
 --
 ALTER TABLE `badge`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `collection_video`
+--
+ALTER TABLE `collection_video`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_collection_video` (`id_collection`,`id_video`),
+  ADD KEY `idx_collection` (`id_collection`),
+  ADD KEY `idx_video` (`id_video`);
 
 --
 -- Indexes for table `favorit_video`
@@ -871,6 +1027,13 @@ ALTER TABLE `video`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `video_collection`
+--
+ALTER TABLE `video_collection`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_collection` (`id_user`);
+
+--
 -- Constraints for dumped tables
 --
 
@@ -881,6 +1044,13 @@ ALTER TABLE `attempt_answer`
   ADD CONSTRAINT `attempt_answer_ibfk_1` FOREIGN KEY (`attempt_id`) REFERENCES `quiz_attempt` (`id`),
   ADD CONSTRAINT `attempt_answer_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `question` (`id`),
   ADD CONSTRAINT `attempt_answer_ibfk_3` FOREIGN KEY (`option_id`) REFERENCES `question_option` (`id`);
+
+--
+-- Constraints for table `collection_video`
+--
+ALTER TABLE `collection_video`
+  ADD CONSTRAINT `fk_cv_collection` FOREIGN KEY (`id_collection`) REFERENCES `video_collection` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_cv_video` FOREIGN KEY (`id_video`) REFERENCES `video` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `favorit_video`
@@ -978,6 +1148,12 @@ ALTER TABLE `user_points`
 ALTER TABLE `user_visit`
   ADD CONSTRAINT `user_visit_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`users_id`),
   ADD CONSTRAINT `user_visit_ibfk_2` FOREIGN KEY (`tourist_place_id`) REFERENCES `tourist_place` (`tourist_place_id`);
+
+--
+-- Constraints for table `video_collection`
+--
+ALTER TABLE `video_collection`
+  ADD CONSTRAINT `fk_video_collection_user` FOREIGN KEY (`id_user`) REFERENCES `users` (`users_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

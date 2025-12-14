@@ -228,7 +228,7 @@ const sendReviewAddedNotification = async (userId, touristPlaceId, rating) => {
 };
 
 // Notifikasi: Tempat wisata berhasil dikunjungi (berdasarkan tabel user_visit setelah scan QR)
-const sendPlaceVisitedNotification = async (userId, touristPlaceId, qrCodeValue = null) => {
+const sendPlaceVisitedNotification = async (userId, touristPlaceId, qrCodeValue = null, xpReward = 50) => {
     try {
         console.log(`🏛️ Mempersiapkan notifikasi kunjungan untuk User ID: ${userId}`);
 
@@ -280,9 +280,9 @@ const sendPlaceVisitedNotification = async (userId, touristPlaceId, qrCodeValue 
             return { success: false, error: 'FCM token tidak ditemukan' };
         }
 
-        // Buat pesan notifikasi untuk Android
+        // Buat pesan notifikasi untuk Android dengan info XP
         const title = '🏛️ Tempat Wisata Dikunjungi!';
-        const body = `${userName}, terima kasih telah mengunjungi ${placeName}! Jangan lupa tinggalkan ulasan untuk membantu wisatawan lain. 📝`;
+        const body = `${userName}, terima kasih telah mengunjungi ${placeName}! 🎉 Anda mendapat +${xpReward} XP. Jangan lupa tinggalkan ulasan untuk membantu wisatawan lain. 📝`;
 
         const data = {
             type: 'place_visited',
@@ -291,6 +291,7 @@ const sendPlaceVisitedNotification = async (userId, touristPlaceId, qrCodeValue 
             place_name: placeName,
             user_name: userName,
             qr_code_value: qrCodeValue || '',
+            xp_reward: xpReward.toString(),
             action: 'open_add_review',
             // Data untuk Android intent
             screen: 'AddReviewScreen',

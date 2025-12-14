@@ -136,9 +136,9 @@ class ScanMapModel {
     }
 
     /**
-     * Get tourist place basic info
+     * Get tourist place basic info with geolocation data
      * @param {string} touristPlaceId - Tourist place ID
-     * @returns {Promise<Object|null>} Tourist place data
+     * @returns {Promise<Object|null>} Tourist place data with latitude & longitude
      */
     static async getTouristPlaceInfo(touristPlaceId) {
         try {
@@ -148,6 +148,8 @@ class ScanMapModel {
                     name,
                     description,
                     address,
+                    latitude,
+                    longitude,
                     image_url,
                     is_active,
                     average_rating,
@@ -161,6 +163,39 @@ class ScanMapModel {
             return result.length > 0 ? result[0] : null;
         } catch (error) {
             console.error('Error getting tourist place info:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Add XP to user after successful visit
+     * @param {string} userId - User ID
+     * @param {number} xpAmount - XP amount to add (default: 50)
+     * @returns {Promise<Object>} Updated user XP data
+     */
+    static async addUserXP(userId, xpAmount = 50) {
+        try {
+            const updateQuery = `
+                UPDATE users 
+                SET 
+                    total_xp = total_xp + ?,
+                    updated_at = NOW()
+                WHERE users_id = ?
+            `;
+
+            await db.query(updateQuery, [xpAmount, userId]);
+
+            // Get updated user XP
+            const selectQuery = `
+                SELECT users_id, full_name, total_xp 
+                FROM users 
+                WHERE users_id = ?
+            `;
+
+            const result = await db.query(selectQuery, [userId]);
+            return result.length > 0 ? result[0] : null;
+        } catch (error) {
+            console.error('Error adding user XP:', error);
             throw error;
         }
     }
