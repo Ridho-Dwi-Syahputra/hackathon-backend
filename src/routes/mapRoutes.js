@@ -32,6 +32,11 @@ const authenticateTokenEnhanced = authenticateTokenFromDB;
 // Required auth - menggunakan JWT token dari header Authorization
 router.get('/places', authenticateToken, detailMapController.getPlacesWithVisitStatus);
 
+// SEARCH: Search tempat wisata berdasarkan keyword
+// GET /api/map/places/search?query=keyword
+// Required auth - untuk menampilkan status kunjungan user
+router.get('/places/search', authenticateToken, detailMapController.searchPlaces);
+
 // ADDITIONAL: List tempat wisata yang sudah dikunjungi
 // GET /api/map/visited
 router.get('/visited', authenticateToken, detailMapController.getVisitedPlaces);

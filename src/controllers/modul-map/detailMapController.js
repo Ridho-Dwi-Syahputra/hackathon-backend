@@ -209,6 +209,77 @@ const detailMapController = {
     },
 
     /**
+     * SEARCH: Search tempat wisata berdasarkan nama, deskripsi, atau alamat
+     * Endpoint: GET /api/map/places/search?query=keyword
+     * Response: Array tempat wisata yang sesuai dengan keyword
+     */
+    searchPlaces: async (req, res) => {
+        const startTime = Date.now();
+        const userId = req.user?.users_id;
+        const { query } = req.query;
+
+        try {
+            if (!query || query.trim() === '') {
+                return errorResponse(res, 'Query pencarian tidak boleh kosong', 400);
+            }
+
+            logDetail('INFO', 
+                `User ${userId} melakukan pencarian tempat wisata: "${query}"`, {
+                    user_id: userId,
+                    endpoint: 'GET /api/map/places/search',
+                    search_query: query,
+                    ip_address: req.ip,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            // Search tempat wisata dengan status kunjungan user
+            const searchResults = await detailMapModel.searchPlaces(userId, query);
+
+            // Format data untuk frontend
+            const formattedResults = searchResults.map(place => ({
+                ...place,
+                is_visited: Boolean(place.is_visited),
+                is_active: Boolean(place.is_active || true)
+            }));
+
+            const duration = Date.now() - startTime;
+            logDetail('SUCCESS', 
+                `Pencarian berhasil, ditemukan ${formattedResults.length} tempat wisata`, {
+                    user_id: userId,
+                    search_query: query,
+                    total_results: formattedResults.length,
+                    response_time_ms: duration,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            return successResponse(res, 
+                formattedResults,
+                `Ditemukan ${formattedResults.length} tempat wisata untuk "${query}"`
+            );
+
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            logDetail('ERROR', 
+                `Gagal melakukan pencarian: ${error.message}`, {
+                    user_id: userId,
+                    search_query: query,
+                    error_message: error.message,
+                    error_stack: error.stack,
+                    response_time_ms: duration,
+                    timestamp_indo: getIndonesianTime()
+                }
+            );
+
+            return errorResponse(res, 
+                'Terjadi kesalahan saat melakukan pencarian', 
+                500
+            );
+        }
+    },
+
+    /**
      * ADDITIONAL: List tempat wisata yang sudah dikunjungi user
      * Endpoint: GET /api/map/visited
      * Response: Array tempat wisata yang sudah dikunjungi dengan pagination

@@ -100,6 +100,57 @@ class DetailMapModel {
     }
 
     /**
+     * Search tourist places by name, description, or address
+     * @param {string} userId - User ID for visit status
+     * @param {string} searchQuery - Search keyword
+     * @returns {Promise<Array>} Array of matching places with visit status
+     */
+    static async searchPlaces(userId, searchQuery) {
+        try {
+            const searchTerm = `%${searchQuery}%`;
+            const query = `
+                SELECT 
+                    tp.tourist_place_id,
+                    tp.name,
+                    tp.description,
+                    tp.address,
+                    tp.image_url,
+                    tp.average_rating,
+                    CASE 
+                        WHEN uv.status = 'visited' THEN true
+                        ELSE false
+                    END as is_visited,
+                    uv.visited_at
+                FROM tourist_place tp
+                LEFT JOIN user_visit uv ON tp.tourist_place_id = uv.tourist_place_id 
+                    AND uv.user_id = ?
+                WHERE tp.is_active = 1
+                    AND (
+                        tp.name LIKE ? 
+                        OR tp.description LIKE ? 
+                        OR tp.address LIKE ?
+                    )
+                ORDER BY 
+                    CASE WHEN tp.name LIKE ? THEN 1 ELSE 2 END,
+                    tp.average_rating DESC,
+                    tp.name ASC
+            `;
+            
+            const result = await db.query(query, [
+                userId, 
+                searchTerm, 
+                searchTerm, 
+                searchTerm,
+                searchTerm
+            ]);
+            return result;
+        } catch (error) {
+            console.error('Error searching places:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get visited places by user with pagination
      * @param {string} userId - User ID
      * @param {number} limit - Limit per page
