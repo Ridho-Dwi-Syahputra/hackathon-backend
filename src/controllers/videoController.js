@@ -80,28 +80,47 @@ exports.getVideoDetail = async (req, res, next) => {
         const userId = req.user.users_id;
         const { videoId } = req.params;
 
+        console.log('🎬 Get Video Detail Request:', {
+            userId: userId,
+            videoId: videoId,
+            timestamp: new Date().toISOString(),
+        });
+
         const videos = await db.query(
             `SELECT 
          v.*,
-         CASE WHEN fv.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
+         CASE WHEN fv.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited,
+         fv.id as favorite_record_id
        FROM video v
        LEFT JOIN favorit_video fv ON v.id = fv.id_video AND fv.id_user = ?
        WHERE v.id = ? AND v.is_active = 1`,
             [userId, videoId]
         );
 
+        console.log('🎬 Video Detail Query Result:', {
+            found: videos.length > 0,
+            videoId: videoId,
+            videoTitle: videos.length > 0 ? videos[0].judul : 'Not Found',
+            isFavorited: videos.length > 0 ? videos[0].is_favorited : 'N/A',
+            favoriteRecordId: videos.length > 0 ? videos[0].favorite_record_id : 'N/A',
+            userId: userId,
+        });
+
         if (videos.length === 0) {
+            console.log('❌ Video not found:', videoId);
             return res.status(404).json({
                 success: false,
                 message: 'Video tidak ditemukan',
             });
         }
 
+        console.log('✅ Video detail sent successfully');
         res.json({
             success: true,
             data: videos[0],
         });
     } catch (error) {
+        console.error('❌ Error in getVideoDetail:', error.message);
         next(error);
     }
 };
@@ -161,6 +180,7 @@ exports.addFavoriteVideo = async (req, res, next) => {
                     '🎉 Video Ditambahkan ke Favorit!',
                     `Video "${videoJudul}" berhasil ditambahkan ke koleksi favorit Anda`,
                     {
+                        module: 'video', // ⬅️ CRITICAL: Required for proper notification handling
                         type: 'video_favorited',
                         video_id: videoId,
                         video_title: videoJudul,
@@ -195,20 +215,42 @@ exports.removeFavoriteVideo = async (req, res, next) => {
         const userId = req.user.users_id;
         const { videoId } = req.params;
 
-        const result = await db.query('DELETE FROM favorit_video WHERE id_user = ? AND id_video = ?', [userId, videoId]);
+        console.log('🗑️ Remove Favorite Video Request:', {
+            userId: userId,
+            videoId: videoId,
+            timestamp: new Date().toISOString(),
+        });
 
-        if (result.affectedRows === 0) {
+        // Check if exists before deleting
+        const existing = await db.query('SELECT id, tanggal_ditambah FROM favorit_video WHERE id_user = ? AND id_video = ?', [userId, videoId]);
+
+        console.log('🔍 Favorite record check:', {
+            found: existing.length > 0,
+            recordId: existing.length > 0 ? existing[0].id : 'N/A',
+            addedDate: existing.length > 0 ? existing[0].tanggal_ditambah : 'N/A',
+        });
+
+        if (existing.length === 0) {
+            console.log('❌ Video not found in favorites - possible data inconsistency');
             return res.status(404).json({
                 success: false,
                 message: 'Video tidak ditemukan di favorit',
             });
         }
 
+        const result = await db.query('DELETE FROM favorit_video WHERE id_user = ? AND id_video = ?', [userId, videoId]);
+
+        console.log('✅ Delete result:', {
+            affectedRows: result.affectedRows,
+            success: result.affectedRows > 0,
+        });
+
         res.json({
             success: true,
             message: 'Video berhasil dihapus dari favorit',
         });
     } catch (error) {
+        console.error('❌ Error removing favorite:', error.message);
         next(error);
     }
 };
