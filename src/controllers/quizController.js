@@ -2,6 +2,9 @@ const db = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 const seedrandom = require('seedrandom');
 
+// Import quiz notification controller
+const { sendQuizCompletedNotification } = require('./firebase/notifikasi/modul-kuis/kuisNotifikasiController');
+
 // ============================================================================
 // POST /api/quiz/start - Mulai quiz attempt baru
 // ============================================================================
@@ -377,23 +380,35 @@ exports.submitQuiz = async (req, res, next) => {
     
     const newTotalXp = userInfo[0]?.total_xp || 0;
 
-    // 13. Return response
+    // 13. Kirim notifikasi quiz selesai (AWAIT - sama seperti map notification)
+    const quizResultData = {
+      attempt_id: attempt_id,
+      score_points: scorePoints,
+      correct_count: correctCount,
+      wrong_count: wrongCount,
+      unanswered_count: unansweredCount,
+      percent_correct: parseFloat(percentCorrect.toFixed(2)),
+      xp_earned: xpEarned,
+      points_earned: scorePoints,
+      is_passed: isPassed,
+      new_total_xp: newTotalXp,
+      badges_earned: badgesEarned
+    };
+
+    // Kirim notifikasi dan tunggu hasilnya (sama seperti review notification di map)
+    try {
+      await sendQuizCompletedNotification(userId, attempt_id, quizResultData);
+      console.log(`✅ Notifikasi kuis berhasil dikirim untuk attempt ${attempt_id}`);
+    } catch (notifError) {
+      console.warn(`⚠️ Gagal mengirim notifikasi kuis: ${notifError.message}`);
+      // Notifikasi gagal tidak mengganggu response quiz
+    }
+
+    // 14. Return response
     res.json({
       success: true,
       message: isPassed ? 'Selamat! Anda lulus quiz ini' : 'Quiz selesai. Coba lagi untuk hasil lebih baik',
-      data: {
-        attempt_id: attempt_id,
-        score_points: scorePoints,
-        correct_count: correctCount,
-        wrong_count: wrongCount,
-        unanswered_count: unansweredCount,
-        percent_correct: parseFloat(percentCorrect.toFixed(2)),
-        xp_earned: xpEarned,
-        points_earned: scorePoints,  // points_earned sama dengan score_points
-        is_passed: isPassed,
-        new_total_xp: newTotalXp,
-        badges_earned: badgesEarned
-      }
+      data: quizResultData
     });
 
   } catch (error) {

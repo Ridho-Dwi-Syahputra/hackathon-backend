@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 13, 2025 at 07:20 PM
+-- Generation Time: Dec 14, 2025 at 10:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -503,9 +503,10 @@ CREATE TABLE `review` (
 --
 
 INSERT INTO `review` (`review_id`, `user_id`, `tourist_place_id`, `rating`, `review_text`, `created_at`, `updated_at`, `total_likes`) VALUES
-('RV289', 'U403', 'TP001', 3, 'bagus bagus', '2025-12-13 17:53:24', '2025-12-13 17:53:24', 0),
-('RV417', 'U893', 'TP001', 5, 'baguss bangett', '2025-12-11 19:15:09', '2025-12-11 19:25:21', 1),
-('RV738', 'U979', 'TP001', 3, 'baguss, kerenn', '2025-12-10 17:07:21', '2025-12-13 09:17:33', 2);
+('RV128', 'U403', 'TP001', 4, 'baguss', '2025-12-14 08:38:41', '2025-12-14 08:38:41', 0),
+('RV417', 'U893', 'TP001', 5, 'baguss bangett', '2025-12-11 19:15:09', '2025-12-14 08:38:13', 0),
+('RV738', 'U979', 'TP001', 3, 'baguss, kerenn', '2025-12-10 17:07:21', '2025-12-14 08:38:15', 2),
+('RV816', 'U403', 'TP003', 4, 'kerenn', '2025-12-14 06:50:45', '2025-12-14 06:50:45', 0);
 
 --
 -- Triggers `review`
@@ -559,9 +560,8 @@ CREATE TABLE `review_like` (
 --
 
 INSERT INTO `review_like` (`review_like_id`, `user_id`, `review_id`, `created_at`) VALUES
-('RL333', 'U403', 'RV738', '2025-12-13 09:17:33'),
-('RL457', 'U893', 'RV738', '2025-12-11 19:13:33'),
-('RL913', 'U403', 'RV417', '2025-12-11 19:25:21');
+('RL136', 'U403', 'RV738', '2025-12-14 08:38:15'),
+('RL457', 'U893', 'RV738', '2025-12-11 19:13:33');
 
 --
 -- Triggers `review_like`
@@ -608,9 +608,9 @@ CREATE TABLE `tourist_place` (
 --
 
 INSERT INTO `tourist_place` (`tourist_place_id`, `name`, `description`, `address`, `latitude`, `longitude`, `image_url`, `is_active`, `created_at`, `updated_at`, `average_rating`) VALUES
-('TP001', 'Jam Gadang', 'Jam Gadang adalah ikon pariwisata Kota Bukittinggi yang menjulang setinggi 26 meter di jantung kota. Menara jam ini memiliki keunikan pada angka empat romawi yang ditulis IIII dan atap bagonjong yang mencerminkan arsitektur Minangkabau. Dibangun pada masa kolonial Belanda, tempat ini menawarkan pemandangan kota yang indah dan udara sejuk khas perbukitan.', 'Jl. Raya Bukittinggi - Payakumbuh, Benteng Ps. Atas, Bukittinggi', -0.93262503, 100.42720410, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP001-jam-gadang.jpg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:08', 3.7),
+('TP001', 'Kosan Gacorr', 'Kosan gacor adalah ikon pariwisata Kota Bukittinggi yang menjulang setinggi 26 meter di jantung kota. Menara jam ini memiliki keunikan pada angka empat romawi yang ditulis IIII dan atap bagonjong yang mencerminkan arsitektur Minangkabau. Dibangun pada masa kolonial Belanda, tempat ini menawarkan pemandangan kota yang indah dan udara sejuk khas perbukitan.', 'Pauh, Pasar Baru, Padang', -0.93262503, 100.42720410, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP001-jam-gadang.jpg', 1, '2025-11-29 15:16:28', '2025-12-14 08:38:33', 4.0),
 ('TP002', 'Museum Gudang Ransum', 'Terletak di Sawahlunto, museum ini merupakan bekas dapur umum yang dibangun pada tahun 1918 untuk pekerja tambang batubara. Koleksinya meliputi periuk dan kuali raksasa yang menjadi saksi bisu sejarah pertambangan \"Orang Rantai\" di era kolonial. Wisatawan dapat mempelajari sejarah kuliner massal dan teknologi uap yang digunakan pada masa lampau.', 'Jl. Abdul Rahman Hakim, Air Dingin, Sawahlunto', -0.66985000, 100.76891000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP002-museum-gudang-ransum.jpg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:38', 0.0),
-('TP003', 'Pantai Air Manis', 'Pantai ini terkenal di seluruh nusantara sebagai lokasi legenda Malin Kundang si anak durhaka. Pengunjung dapat melihat formasi batu yang menyerupai pecahan kapal dan sosok manusia yang sedang bersujud memohon ampun di tepi pantai. Selain wisata sejarah, pantai ini menawarkan pasir cokelat yang luas dan pemandangan Gunung Padang yang memukau.', 'Jl. Malin Kundang, Air Manis, Padang Selatan, Kota Padang', -0.99871000, 100.36370000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP003-pantai-air-manis.jpg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:38', 0.0),
+('TP003', 'Pantai Air Manis', 'Pantai ini terkenal di seluruh nusantara sebagai lokasi legenda Malin Kundang si anak durhaka. Pengunjung dapat melihat formasi batu yang menyerupai pecahan kapal dan sosok manusia yang sedang bersujud memohon ampun di tepi pantai. Selain wisata sejarah, pantai ini menawarkan pasir cokelat yang luas dan pemandangan Gunung Padang yang memukau.', 'Jl. Malin Kundang, Air Manis, Padang Selatan, Kota Padang', -0.99871000, 100.36370000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP003-pantai-air-manis.jpg', 1, '2025-11-29 15:16:28', '2025-12-14 06:50:45', 4.0),
 ('TP004', 'Pantai Carocok', 'Primadona wisata di Painan, Pesisir Selatan ini menawarkan keindahan air laut yang jernih dan jembatan apung yang ikonik. Terhubung dengan Pulau Batu Kereta, kawasan ini menjadi spot favorit untuk menikmati matahari terbenam dan bermain wahana air. Suasana pantai yang tenang menjadikannya lokasi yang sempurna untuk rekreasi keluarga.', 'Jl. Pantai Carocok, Painan, Pesisir Selatan', -1.34539000, 100.58867000, 'https://lqdmiwpsmufcwziayoev.supabase.co/storage/v1/object/public/sako-assets/tourist-places/TP004-pantai-carocok.jpeg', 1, '2025-11-29 15:16:28', '2025-12-13 18:06:38', 0.0);
 
 --
@@ -655,7 +655,7 @@ INSERT INTO `users` (`users_id`, `full_name`, `email`, `password_hash`, `total_x
 ('U080', 'Ridhoooo123aa', 'ridho123@gmail.com', '$2b$10$ythHm9TW77j3cO0P2AfI0en/vzDxAkqe6XQrIMYN4Pnrw/V0olqrG', 0, 'active', NULL, '2025-12-10 10:24:56', '2025-12-10 10:25:29', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlUwODAiLCJlbWFpbCI6InJpZGhvMTIzQGdtYWlsLmNvbSIsImlhdCI6MTc2NTM2MjMyOSwiZXhwIjoxNzY3OTU0MzI5fQ.g1P9o_GQQjYNwwAwWUzI6HzCRLRV3bVqRfK4wnpsbrk', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:25:29'),
 ('U094', 'Ridhooo', 'testt@gmail.com', '$2b$10$01lRbCO08my6K1uSQeTDU.T8ekE5fmTy0ZIxH/3qsAcZAoqfilOMW', 0, 'active', NULL, '2025-12-10 10:05:38', '2025-12-10 10:06:13', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlUwOTQiLCJlbWFpbCI6InRlc3R0QGdtYWlsLmNvbSIsImlhdCI6MTc2NTM2MTE3MywiZXhwIjoxNzY3OTUzMTczfQ.GSZijqjCRsirbWNbJVYiTh3hx6gRHcwUrC8KKf7JIbg', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:06:13'),
 ('U320', 'ochaa', 'raisyaa@gmail.com', '$2b$10$tmy//VrbXyYeiCjRHW3xDenyCb0yLfUqTopEDQDOrnrm61h1Eu2yC', 0, 'active', NULL, '2025-12-10 14:44:04', '2025-12-10 14:44:53', 'T1765377893086-U320', 'd2qiDZt8QDeLvE3UMSvi98:APA91bGPM04IEtx3Xp5doMdUVMnQ_6-Vq0H-0MYIQSKZ5VgmJWE1yxQFKHgHVckH8HfaoIdVI-HsnW2VaZSPp9fr3FsM-JGJf8TqwKci2l45DAKLkBivy08', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 21:44:53'),
-('U403', 'Ridho Dwi Syahputra', 'ridhooo1@example.com', '$2b$10$oyTs20zxImh4UHTMB7xgBOmcMkKLdudQHni5JWvcQBnheh0vKntYm', 50, 'active', NULL, '2025-12-05 06:22:21', '2025-12-13 17:08:13', 'T1765481079369-U403', 'eXFnc96JT1O5n3U4F9VWyu:APA91bEh71TM_ML4qICTnpnxAh3ugHZeXnShpGWCXC1ij6xt4r4LDsZWxozalv3o0FH_ZRYOcJIt9i1jl2IO-6DKCOci_9WnwNLN6kDzQN7cDs87bzqEZjg', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-11 02:24:39'),
+('U403', 'Ridho Dwi Syahputra', 'ridhooo1@example.com', '$2b$10$oyTs20zxImh4UHTMB7xgBOmcMkKLdudQHni5JWvcQBnheh0vKntYm', 500, 'active', NULL, '2025-12-05 06:22:21', '2025-12-14 06:50:16', 'T1765695016015-U403', 'eXFnc96JT1O5n3U4F9VWyu:APA91bEh71TM_ML4qICTnpnxAh3ugHZeXnShpGWCXC1ij6xt4r4LDsZWxozalv3o0FH_ZRYOcJIt9i1jl2IO-6DKCOci_9WnwNLN6kDzQN7cDs87bzqEZjg', '{\"map_notifications\":{\"place_visited\":true,\"review_added\":true},\"marketing\":false,\"quiz_notifications\":true,\"system_announcements\":true,\"video_notifications\":true}', '2026-01-13 13:50:16'),
 ('U586', 'Dev Sako', 'sako@dev.com', '$2b$10$lg4o3qPduBra7DpjMzwcfeUo/MCncVPw1u8I0ioAAdiVn8WvdPf92', 0, 'active', NULL, '2025-12-12 05:52:09', '2025-12-12 05:56:15', 'T1765518738108-U586', 'eUHF4dshRAeVLPvC4H7ubH:APA91bFITiULngRTDhCLhBap2EbK_WbhBC3pATOyA3drlgRAtSyepDgMtWvblXJJs33rYnWD5OWd7i40n_WnNqpsSXv4jdvRGO9HV9k0Mv7jtmmWCb2mgm0', '{\"map_notifications\":{\"place_visited\":true,\"review_added\":true},\"marketing\":false,\"quiz_notifications\":true,\"system_announcements\":true,\"video_notifications\":true}', '2026-01-11 12:52:18'),
 ('U621', 'Ridhoooooooooooo', 'testing123455@gmail.com', '$2b$10$yWn/MZhT035NgrRnAh2W5O6190cCcZclLdfccxWbcpB2PQ05zVBDm', 0, 'active', NULL, '2025-12-10 10:31:03', '2025-12-10 10:38:53', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2Vyc19pZCI6IlU2MjEiLCJpYXQiOjE3NjUzNjMxMzMsImV4cCI6MTc2NTM2NjczM30.gKDfte-Q3AzUQBjZBDM8-o8RFmnZlGwvYwNGKU2CwK4', 'eIFfXb7TT9-PeXC7dB2DcH:APA91bHbSuC05FIsHXHhsKUmEc2PH8obnnBK_cRi618Ve_aqYzLOKdtIDftMOLwsS-JfI2TYnpSdeJPaEUuPCleb5d0SN72xpwhN1a1C5F9tl-55u64L6F8', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2026-01-09 17:38:53'),
 ('U662', 'Ridho Dwi Syahputra', 'ridhooo@example.com', '$2b$10$Hl62xlT5R2Ws.Dxd/bnXNea5W6S1g9nv0I3hVZugQvTZxAhUiWg/u', 50, 'active', NULL, '2025-12-05 06:18:49', '2025-12-13 17:12:13', NULL, 'fYItkDNzTba0eimnjGpYc9:APA91bHNsAl8oVU1l1Kfb1q0ejsD5U4TdRdt6RSB5nCze5Ksp2frwotPOn-UTIfwFD5HPSTAfC-tRX-Y6ppTugGHlsIcE2e4d6oTZBatiD5_WAomgPDTZys', '{\"system_announcements\":true,\"marketing\":false,\"map_notifications\":{\"review_added\":true,\"place_visited\":true}}', '2025-12-05 13:18:49'),
@@ -797,7 +797,7 @@ INSERT INTO `user_visit` (`user_visit_id`, `user_id`, `tourist_place_id`, `statu
 ('b2d7aab9-d71e-11f0-9e0d-55795f701413', 'U586', 'TP002', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
 ('b2d7ab7e-d71e-11f0-9e0d-55795f701413', 'U586', 'TP003', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
 ('b2d7abec-d71e-11f0-9e0d-55795f701413', 'U586', 'TP004', 'not_visited', NULL, '2025-12-12 05:52:09', '2025-12-12 05:52:09'),
-('c1d98262-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP001', 'not_visited', NULL, '2025-12-05 06:22:21', '2025-12-05 06:22:21'),
+('c1d98262-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP001', 'visited', '2025-12-14 05:52:44', '2025-12-05 06:22:21', '2025-12-14 05:52:44'),
 ('c1d984dc-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP002', 'visited', NULL, '2025-12-05 06:22:21', '2025-12-05 09:13:02'),
 ('c1d98600-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP003', 'not_visited', NULL, '2025-12-05 06:22:21', '2025-12-05 06:22:21'),
 ('c1d98722-d1a2-11f0-9bc6-4f5ce35c2399', 'U403', 'TP004', 'not_visited', NULL, '2025-12-05 06:22:21', '2025-12-05 06:22:21'),
