@@ -1,3 +1,6 @@
 .env
 logs
 node_modules
+temp-uploads/
+*.log
+public/uploads/

@@ -204,6 +204,30 @@ class AuthModel {
             throw error;
         }
     }
+
+    /**
+     * Get user by ID (alias for findUserById for compatibility)
+     * @param {string} userId - User ID
+     * @returns {Promise<Object|null>} User data or null if not found
+     */
+    static async getUserById(userId) {
+        return this.findUserById(userId);
+    }
+
+    /**
+     * Update profile image URL
+     * @param {string} userId - User ID
+     * @param {string} imageUrl - New image URL from Cloudinary
+     * @returns {Promise<void>}
+     */
+    static async updateProfileImage(userId, imageUrl) {
+        try {
+            const query = 'UPDATE users SET user_image_url = ?, updated_at = NOW() WHERE users_id = ?';
+            await db.query(query, [imageUrl, userId]);
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = AuthModel;

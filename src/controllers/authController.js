@@ -3,6 +3,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendNotification } = require('./firebase/firebaseConfig');
+const { uploadToCloudinary, deleteImage, extractPublicId } = require('../config/cloudinary');
 
 // Import Models
 const AuthModel = require('../models/authModel');
@@ -921,3 +922,123 @@ exports.validateToken = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Upload Profile Image
+ * Upload foto profil ke Cloudinary
+ */
+exports.uploadProfileImage = async (req, res, next) => {
+    const startTime = Date.now();
+
+    try {
+        const userId = req.user.users_id;
+
+        // Check if file exists
+        if (!req.file) {
+            await logError(
+                'upload_profile_image',
+                new Error('No file uploaded'),
+                {
+                    users_id: userId,
+                    ip: req.ip,
+                },
+                'modul-autentikasi'
+            );
+
+            return validationErrorResponse(
+                res,
+                [{ field: 'image', message: 'File gambar harus diupload' }],
+                'Tidak ada file yang diupload'
+            );
+        }
+
+        // Log upload attempt
+        await logActivity(
+            'upload_profile_image',
+            'attempt',
+            {
+                users_id: userId,
+                filename: req.file.originalname,
+                size: req.file.size,
+                mimetype: req.file.mimetype,
+                ip: req.ip,
+            },
+            'modul-autentikasi'
+        );
+
+        // Get current user data
+        const currentUser = await AuthModel.getUserById(userId);
+        if (!currentUser) {
+            return notFoundResponse(res, 'User tidak ditemukan');
+        }
+
+        // Upload to Cloudinary
+        const cloudinaryResult = await uploadToCloudinary(req.file.path, userId);
+
+        // Delete old profile image from Cloudinary if exists
+        if (currentUser.user_image_url) {
+            const oldPublicId = extractPublicId(currentUser.user_image_url);
+            if (oldPublicId) {
+                try {
+                    await deleteImage(oldPublicId);
+                    await logActivity(
+                        'delete_old_profile_image',
+                        'success',
+                        {
+                            users_id: userId,
+                            old_image_url: currentUser.user_image_url,
+                            public_id: oldPublicId,
+                        },
+                        'modul-autentikasi'
+                    );
+                } catch (deleteError) {
+                    console.error('Error deleting old image:', deleteError);
+                    // Continue even if deletion fails
+                }
+            }
+        }
+
+        // Update user_image_url in database
+        await AuthModel.updateProfileImage(userId, cloudinaryResult.secure_url);
+
+        const processingTime = Date.now() - startTime;
+
+        // Log successful upload
+        await logActivity(
+            'upload_profile_image',
+            'success',
+            {
+                users_id: userId,
+                new_image_url: cloudinaryResult.secure_url,
+                cloudinary_public_id: cloudinaryResult.public_id,
+                file_size: req.file.size,
+                processing_time_ms: processingTime,
+                ip: req.ip,
+            },
+            'modul-autentikasi'
+        );
+
+        return successResponse(
+            res,
+            {
+                user_image_url: cloudinaryResult.secure_url,
+                cloudinary_public_id: cloudinaryResult.public_id,
+            },
+            'Foto profil berhasil diupload'
+        );
+    } catch (error) {
+        await logError(
+            'upload_profile_image_error',
+            error,
+            {
+                users_id: req.user?.users_id,
+                ip: req.ip,
+                stack: error.stack,
+            },
+            'modul-autentikasi'
+        );
+
+        next(error);
+    }
+};
+

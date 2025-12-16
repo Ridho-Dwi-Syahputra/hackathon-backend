@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
+const { uploadProfileImage } = require('../config/cloudinary');
 // Import database token middleware sebagai alternatif
 const { authenticateTokenFromDB } = require('../middleware/token');
 
@@ -19,6 +20,9 @@ router.post('/logout', authMiddleware, authController.logout);
 // FCM routes
 router.put('/fcm-token', authMiddleware, authController.updateFcmToken);
 // NOTE: Notification preferences routes dipindahkan ke settingRoutes.js (modul-profile)
+
+// Profile Image Upload
+router.post('/upload-profile-image', authMiddleware, uploadProfileImage.single('image'), authController.uploadProfileImage);
 
 // ====== DATABASE TOKEN MANAGEMENT ROUTES ======
 // Menggunakan database token middleware
