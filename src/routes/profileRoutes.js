@@ -7,6 +7,8 @@ const changeProfileController = require('../controllers/modul-profile/changeProf
 const settingController = require('../controllers/modul-profile/settingController');
 const authMiddleware = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { uploadProfileImage } = require('../config/cloudinary');
+const authController = require('../controllers/authController');
 
 /**
  * Profile Routes
@@ -48,11 +50,7 @@ router.put('/profile', changeProfileController.updateProfile);
  * @access  Private
  * @body    multipart/form-data with 'image' field
  */
-router.put('/profile/image', (req, res, next) => {
-    // Set upload type for middleware
-    req.uploadType = 'profiles';
-    next();
-}, upload.single('image'), changeProfileController.updateProfileImage);
+router.put('/profile/image', uploadProfileImage.single('image'), authController.uploadProfileImage);
 
 /**
  * @route   PUT /auth/password
