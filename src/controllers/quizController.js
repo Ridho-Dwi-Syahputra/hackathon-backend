@@ -580,8 +580,9 @@ async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, con
 
     switch (badge.criteria_type) {
       case 'level_100_percent':
-        // Perfect score pada level tertentu
-        if (percentCorrect === 100) {
+        // Perfect or high score pada level tertentu
+        if (criteriaValue.level_id === level.id && 
+            percentCorrect >= (criteriaValue.min_percent || 100)) {
           shouldAward = true;
         }
         break;
@@ -589,25 +590,98 @@ async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, con
       case 'category_mastery':
         // Complete semua level dalam kategori dengan >= threshold
         const [categoryProgress] = await connection.query(`
-          SELECT percent_completed FROM user_category_progress
-          WHERE user_id = ? AND category_id = ?
-        `, [userId, level.category_id]);
+          SELECT 
+            COUNT(l.id) as total_levels,
+            SUM(CASE WHEN ulp.status = 'completed' 
+                     AND ulp.best_percent_correct >= ? 
+                THEN 1 ELSE 0 END) as completed_levels
+          FROM level l
+          LEFT JOIN user_level_progress ulp ON l.id = ulp.level_id AND ulp.user_id = ?
+          WHERE l.category_id = ? AND l.is_active = 1
+        `, [criteriaValue.min_percent || 70, userId, criteriaValue.category_id]);
 
         if (categoryProgress.length > 0 && 
-            categoryProgress[0].percent_completed >= (criteriaValue.threshold || 100)) {
+            categoryProgress[0].total_levels > 0 &&
+            categoryProgress[0].completed_levels >= categoryProgress[0].total_levels) {
           shouldAward = true;
         }
         break;
 
       case 'points_total':
         // Total points mencapai threshold
-        const [userPoints] = await connection.query(`
+        const [userPointsRows] = await connection.query(`
           SELECT total_points FROM user_points WHERE user_id = ?
         `, [userId]);
 
-        if (userPoints.length > 0 && 
-            userPoints[0].total_points >= criteriaValue.threshold) {
+        // Jika belum ada record, insert dulu
+        if (userPointsRows.length === 0) {
+          await connection.query(`
+            INSERT INTO user_points (user_id, total_points, lifetime_points)
+            SELECT ?, COALESCE(SUM(score_points), 0), COALESCE(SUM(score_points), 0)
+            FROM quiz_attempt
+            WHERE user_id = ? AND status = 'submitted'
+          `, [userId, userId]);
+          
+          // Re-query
+          const [newPoints] = await connection.query(`
+            SELECT total_points FROM user_points WHERE user_id = ?
+          `, [userId]);
+          
+          if (newPoints.length > 0 && 
+              newPoints[0].total_points >= criteriaValue.min_points) {
+            shouldAward = true;
+          }
+        } else if (userPointsRows[0].total_points >= criteriaValue.min_points) {
           shouldAward = true;
+        }
+        break;
+
+      case 'streak':
+        // Main quiz berturut-turut (simplified - cek distinct dates)
+        const [streakData] = await connection.query(`
+          SELECT COUNT(DISTINCT DATE(finished_at)) as streak_days
+          FROM quiz_attempt
+          WHERE user_id = ? 
+            AND status = 'submitted'
+            AND finished_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        `, [userId, criteriaValue.days]);
+
+        if (streakData.length > 0 && 
+            streakData[0].streak_days >= criteriaValue.days) {
+          shouldAward = true;
+        }
+        break;
+
+      case 'custom':
+        // Handle custom criteria types
+        if (criteriaValue.type === 'perfect_score_count') {
+          // Dapatkan perfect score pada N level berbeda
+          const [perfectScores] = await connection.query(`
+            SELECT COUNT(DISTINCT level_id) as perfect_count
+            FROM user_level_progress
+            WHERE user_id = ? AND best_percent_correct = 100
+          `, [userId]);
+
+          if (perfectScores.length > 0 && 
+              perfectScores[0].perfect_count >= criteriaValue.count) {
+            shouldAward = true;
+          }
+        } else if (criteriaValue.type === 'complete_all') {
+          // Selesaikan semua level
+          const [allLevelsProgress] = await connection.query(`
+            SELECT 
+              COUNT(l.id) as total_levels,
+              SUM(CASE WHEN ulp.status = 'completed' THEN 1 ELSE 0 END) as completed_levels
+            FROM level l
+            LEFT JOIN user_level_progress ulp ON l.id = ulp.level_id AND ulp.user_id = ?
+            WHERE l.is_active = 1
+          `, [userId]);
+
+          if (allLevelsProgress.length > 0 && 
+              allLevelsProgress[0].total_levels > 0 &&
+              allLevelsProgress[0].completed_levels >= allLevelsProgress[0].total_levels) {
+            shouldAward = true;
+          }
         }
         break;
 
@@ -629,8 +703,9 @@ async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, con
         await connection.query(`
           INSERT INTO user_badge (
             id, user_id, badge_id, earned_at, 
-            source_level_id, source_category_id, attempt_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            source_level_id, source_category_id, attempt_id,
+            is_viewed, viewed_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)
         `, [
           uuidv4(),
           userId,
