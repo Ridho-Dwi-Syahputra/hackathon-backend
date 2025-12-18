@@ -137,15 +137,17 @@ const getRecentQuizAttempts = async (userId, limit = 5) => {
     try {
         const query = `
             SELECT 
-                qa.id,
+                qa.id as attempt_id,
                 qa.level_id,
                 l.name as level_name,
                 qc.name as category_name,
                 qa.score_points,
                 qa.percent_correct,
                 qa.status,
+                l.base_xp,
+                l.pass_threshold,
                 qa.started_at,
-                qa.finished_at
+                qa.finished_at as created_at
             FROM quiz_attempt qa
             JOIN level l ON qa.level_id = l.id
             JOIN quiz_category qc ON l.category_id = qc.id
@@ -155,7 +157,29 @@ const getRecentQuizAttempts = async (userId, limit = 5) => {
         `;
         
         const rows = await db.query(query, [userId, limit]);
-        return rows;
+        
+        // Calculate XP earned for each attempt and format response
+        return rows.map(row => {
+            // Check if passed
+            const isPassed = row.percent_correct >= parseFloat(row.pass_threshold);
+            
+            // Calculate XP (same logic as quizController.js)
+            let xpEarned = 0;
+            if (isPassed) {
+                const bonus = Math.floor((row.percent_correct - parseFloat(row.pass_threshold)) * 0.5);
+                xpEarned = row.base_xp + bonus;
+            }
+            
+            return {
+                attempt_id: row.attempt_id,
+                level_name: row.level_name,
+                category_name: row.category_name,
+                points_earned: row.score_points,
+                xp_earned: xpEarned,
+                created_at: row.created_at,
+                is_completed: row.status === 'submitted'
+            };
+        });
     } catch (error) {
         console.error('Error getting recent quiz attempts:', error);
         throw error;
