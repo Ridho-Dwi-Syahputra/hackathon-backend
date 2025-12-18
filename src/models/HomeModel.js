@@ -110,7 +110,7 @@ const getUserStats = async (userId) => {
             quiz_stats: {
                 total_attempts: stats.total_quiz_attempts,
                 completed: stats.completed_quizzes,
-                total_points: stats.total_quiz_points
+                total_points: String(stats.total_quiz_points)
             },
             video_stats: {
                 favorites: stats.total_favorite_videos,
@@ -141,13 +141,20 @@ const getRecentQuizAttempts = async (userId, limit = 5) => {
                 qa.level_id,
                 l.name as level_name,
                 qc.name as category_name,
-                qa.score_points,
+                qa.score_points as points_earned,
                 qa.percent_correct,
                 qa.status,
-                l.base_xp,
-                l.pass_threshold,
                 qa.started_at,
-                qa.finished_at as created_at
+                qa.finished_at as created_at,
+                -- Calculate XP earned: only if passed (percent_correct >= pass_threshold)
+                -- Formula: base_xp + bonus (where bonus = (percent_correct - pass_threshold) * 0.5)
+                CASE 
+                    WHEN qa.percent_correct >= l.pass_threshold THEN 
+                        l.base_xp + FLOOR((qa.percent_correct - l.pass_threshold) * 0.5)
+                    ELSE 0
+                END as xp_earned,
+                -- is_completed flag (true if submitted)
+                CASE WHEN qa.status = 'submitted' THEN 1 ELSE 0 END as is_completed
             FROM quiz_attempt qa
             JOIN level l ON qa.level_id = l.id
             JOIN quiz_category qc ON l.category_id = qc.id
@@ -158,28 +165,11 @@ const getRecentQuizAttempts = async (userId, limit = 5) => {
         
         const rows = await db.query(query, [userId, limit]);
         
-        // Calculate XP earned for each attempt and format response
-        return rows.map(row => {
-            // Check if passed
-            const isPassed = row.percent_correct >= parseFloat(row.pass_threshold);
-            
-            // Calculate XP (same logic as quizController.js)
-            let xpEarned = 0;
-            if (isPassed) {
-                const bonus = Math.floor((row.percent_correct - parseFloat(row.pass_threshold)) * 0.5);
-                xpEarned = row.base_xp + bonus;
-            }
-            
-            return {
-                attempt_id: row.attempt_id,
-                level_name: row.level_name,
-                category_name: row.category_name,
-                points_earned: row.score_points,
-                xp_earned: xpEarned,
-                created_at: row.created_at,
-                is_completed: row.status === 'submitted'
-            };
-        });
+        // Convert is_completed from number (0/1) to boolean (true/false)
+        return rows.map(row => ({
+            ...row,
+            is_completed: Boolean(row.is_completed)
+        }));
     } catch (error) {
         console.error('Error getting recent quiz attempts:', error);
         throw error;
@@ -287,10 +277,10 @@ const getUserAchievements = async (userId) => {
     try {
         const query = `
             SELECT 
-                b.id,
-                b.name,
-                b.description,
-                b.image_url,
+                b.id as badge_id,
+                b.name as badge_name,
+                b.description as badge_description,
+                b.image_url as badge_icon,
                 b.criteria_type,
                 ub.earned_at
             FROM user_badge ub
