@@ -49,11 +49,15 @@ exports.getUserProfile = async (userId) => {
                     WHEN ulp.best_percent_correct = 100
                     THEN ulp.level_id 
                 END) as perfect_levels,
-                COALESCE(SUM(ulp.best_score_points), 0) as total_points
+                COALESCE((
+                    SELECT SUM(best_score_points)
+                    FROM user_level_progress
+                    WHERE user_id = ?
+                ), 0) as total_points
              FROM quiz_attempt qa
              LEFT JOIN user_level_progress ulp ON qa.user_id = ulp.user_id
              WHERE qa.user_id = ?`,
-            [userId]
+            [userId, userId]
         );
         const quizStats = quizStatsRows[0];
         console.log('✅ Query 2 result:', quizStats);
