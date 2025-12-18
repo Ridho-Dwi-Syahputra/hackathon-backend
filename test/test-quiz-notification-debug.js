@@ -15,8 +15,8 @@
  */
 
 require('dotenv').config();
-const { pool } = require('./src/config/database');
-const { sendQuizCompletedNotification } = require('./src/controllers/firebase/notifikasi/modul-kuis/kuisNotifikasiController');
+const { pool } = require('../src/config/database');
+const { sendQuizCompletedNotification } = require('../src/controllers/firebase/notifikasi/modul-kuis/kuisNotifikasiController');
 
 // ANSI Colors
 const colors = {

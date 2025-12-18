@@ -16,10 +16,14 @@ const getUserStats = async (userId) => {
                 u.full_name,
                 u.total_xp,
                 u.user_image_url,
-                -- Quiz statistics
+                -- Quiz statistics (count all attempts, but sum only best score per level)
                 COUNT(DISTINCT qa.id) as total_quiz_attempts,
                 COUNT(DISTINCT CASE WHEN qa.status = 'submitted' THEN qa.id END) as completed_quizzes,
-                COALESCE(SUM(CASE WHEN qa.status = 'submitted' THEN qa.score_points ELSE 0 END), 0) as total_quiz_points,
+                COALESCE((
+                    SELECT SUM(ulp.best_score_points)
+                    FROM user_level_progress ulp
+                    WHERE ulp.user_id = u.users_id
+                ), 0) as total_quiz_points,
                 -- Video statistics  
                 COUNT(DISTINCT fv.id) as total_favorite_videos,
                 COUNT(DISTINCT vc.id) as total_collections,

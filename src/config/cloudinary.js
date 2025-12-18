@@ -45,16 +45,18 @@ const uploadProfileImage = multer({
         fileSize: 5 * 1024 * 1024, // Max 5MB
     },
     fileFilter: (req, file, cb) => {
-        // Validate file type by mimetype and extension
-        const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        // Validate file type by extension (lebih permisif untuk Android compressed files)
         const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
         
         const ext = path.extname(file.originalname).toLowerCase();
-        const mimetypeValid = allowedMimeTypes.includes(file.mimetype);
         const extensionValid = allowedExtensions.includes(ext);
         
-        // Accept if either mimetype or extension is valid (untuk compatibility dengan Android)
-        if (mimetypeValid || extensionValid) {
+        // Juga cek mimetype jika tersedia
+        const mimetypeValid = file.mimetype && file.mimetype.startsWith('image/');
+        
+        // Accept jika extension valid ATAU mimetype valid
+        // Ini penting untuk compressed files dari Android yang mimetype-nya mungkin hilang
+        if (extensionValid || mimetypeValid) {
             cb(null, true);
         } else {
             cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);

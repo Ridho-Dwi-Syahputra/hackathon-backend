@@ -362,6 +362,21 @@ exports.submitQuiz = async (req, res, next) => {
       await updateCategoryProgress(userId, level.category_id, connection);
     }
 
+    // 10.5. Update user_points table (sum of best_score_points per level)
+    await connection.query(`
+      INSERT INTO user_points (user_id, total_points, lifetime_points)
+      SELECT 
+        ?,
+        COALESCE(SUM(best_score_points), 0),
+        COALESCE(SUM(best_score_points), 0)
+      FROM user_level_progress
+      WHERE user_id = ?
+      ON DUPLICATE KEY UPDATE
+        total_points = VALUES(total_points),
+        lifetime_points = VALUES(lifetime_points),
+        last_updated_at = NOW()
+    `, [userId, userId]);
+
     // 11. Check dan award badges
     const badgesEarned = await checkAndAwardBadges(
       userId, 
@@ -608,30 +623,13 @@ async function checkAndAwardBadges(userId, attemptId, level, percentCorrect, con
         break;
 
       case 'points_total':
-        // Total points mencapai threshold
+        // Total points mencapai threshold (dari user_points yang sudah di-sync)
         const [userPointsRows] = await connection.query(`
           SELECT total_points FROM user_points WHERE user_id = ?
         `, [userId]);
 
-        // Jika belum ada record, insert dulu
-        if (userPointsRows.length === 0) {
-          await connection.query(`
-            INSERT INTO user_points (user_id, total_points, lifetime_points)
-            SELECT ?, COALESCE(SUM(score_points), 0), COALESCE(SUM(score_points), 0)
-            FROM quiz_attempt
-            WHERE user_id = ? AND status = 'submitted'
-          `, [userId, userId]);
-          
-          // Re-query
-          const [newPoints] = await connection.query(`
-            SELECT total_points FROM user_points WHERE user_id = ?
-          `, [userId]);
-          
-          if (newPoints.length > 0 && 
-              newPoints[0].total_points >= criteriaValue.min_points) {
-            shouldAward = true;
-          }
-        } else if (userPointsRows[0].total_points >= criteriaValue.min_points) {
+        if (userPointsRows.length > 0 && 
+            userPointsRows[0].total_points >= criteriaValue.min_points) {
           shouldAward = true;
         }
         break;

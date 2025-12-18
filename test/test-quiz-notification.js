@@ -8,7 +8,7 @@ console.log('🧪 Starting Quiz Notification Test...\n');
 // Test 1: Import modules
 console.log('📦 Test 1: Importing modules...');
 try {
-    const { sendQuizCompletedNotification, checkQuizNotificationEnabled } = require('./src/controllers/firebase/notifikasi/modul-kuis/kuisNotifikasiController');
+    const { sendQuizCompletedNotification, checkQuizNotificationEnabled } = require('../src/controllers/firebase/notifikasi/modul-kuis/kuisNotifikasiController');
     console.log('✅ kuisNotifikasiController imported successfully');
     
     // Check if functions exist
@@ -31,7 +31,7 @@ try {
 // Test 2: Database connection
 console.log('\n📦 Test 2: Checking database connection...');
 try {
-    const { pool } = require('./src/config/database');
+    const { pool } = require('../src/config/database');
     console.log('✅ Database pool imported successfully');
 } catch (error) {
     console.log('❌ Error importing database:', error.message);
@@ -41,7 +41,7 @@ try {
 // Test 3: Firebase config
 console.log('\n📦 Test 3: Checking Firebase configuration...');
 try {
-    const { sendNotification } = require('./src/controllers/firebase/firebaseConfig');
+    const { sendNotification } = require('../src/controllers/firebase/firebaseConfig');
     console.log('✅ Firebase config imported successfully');
     
     if (typeof sendNotification === 'function') {
@@ -57,7 +57,7 @@ try {
 // Test 4: Logs utility
 console.log('\n📦 Test 4: Checking logs utility...');
 try {
-    const { writeLog, getIndonesianTime } = require('./src/utils/logsGenerator');
+    const { writeLog, getIndonesianTime } = require('../src/utils/logsGenerator');
     console.log('✅ Logs utility imported successfully');
     
     const currentTime = getIndonesianTime();
