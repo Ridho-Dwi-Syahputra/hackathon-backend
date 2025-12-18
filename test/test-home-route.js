@@ -3,7 +3,7 @@ console.log('🔍 Testing homeRoutes loading...\n');
 
 try {
     console.log('1️⃣ Loading homeController...');
-    const homeController = require('./src/controllers/homeController');
+    const homeController = require('../src/controllers/homeController');
     console.log('   ✅ homeController loaded');
     console.log('   - getDashboardData type:', typeof homeController.getDashboardData);
     console.log('   - getUserStats type:', typeof homeController.getUserStats);
@@ -12,13 +12,13 @@ try {
     console.log('');
     
     console.log('2️⃣ Loading verifyToken middleware...');
-    const { verifyToken } = require('./src/middleware/auth');
+    const { verifyToken } = require('../src/middleware/auth');
     console.log('   ✅ verifyToken loaded');
     console.log('   - verifyToken type:', typeof verifyToken);
     console.log('');
     
     console.log('3️⃣ Loading homeRoutes...');
-    const homeRoutes = require('./src/routes/homeRoutes');
+    const homeRoutes = require('../src/routes/homeRoutes');
     console.log('   ✅ homeRoutes loaded');
     console.log('   - homeRoutes type:', typeof homeRoutes);
     console.log('   - homeRoutes constructor:', homeRoutes.constructor.name);
