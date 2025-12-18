@@ -37,17 +37,21 @@ exports.getUserProfile = async (userId) => {
         const user = users[0];
         console.log('✅ User found:', user.id);
 
-        // Get quiz stats - total attempts and completed levels
+        // Get quiz stats - perfect score attempts and perfect levels
         console.log('🔍 Query 2: Fetching quiz stats...');
         const quizStatsRows = await db.query(
             `SELECT 
-                COUNT(DISTINCT qa.id) as total_attempts,
                 COUNT(DISTINCT CASE 
-                    WHEN qa.status = 'submitted' AND qa.percent_correct >= 70 
-                    THEN qa.level_id 
-                END) as completed_levels,
-                COALESCE(SUM(CASE WHEN qa.status = 'submitted' THEN qa.score_points ELSE 0 END), 0) as total_points
+                    WHEN qa.status = 'submitted' AND qa.percent_correct = 100 
+                    THEN qa.id 
+                END) as perfect_quizzes,
+                COUNT(DISTINCT CASE 
+                    WHEN ulp.best_percent_correct = 100
+                    THEN ulp.level_id 
+                END) as perfect_levels,
+                COALESCE(SUM(ulp.best_score_points), 0) as total_points
              FROM quiz_attempt qa
+             LEFT JOIN user_level_progress ulp ON qa.user_id = ulp.user_id
              WHERE qa.user_id = ?`,
             [userId]
         );
@@ -68,9 +72,9 @@ exports.getUserProfile = async (userId) => {
         const result = {
             user: user,
             stats: {
-                total_attempts: quizStats[0]?.total_attempts || 0,
-                completed_levels: quizStats[0]?.completed_levels || 0,
-                total_points: quizStats[0]?.total_points || 0,
+                total_attempts: quizStats?.perfect_quizzes || 0,
+                completed_levels: quizStats?.perfect_levels || 0,
+                total_points: quizStats?.total_points || 0,
                 visited_places: visitStats?.visited_count || 0
             }
         };
